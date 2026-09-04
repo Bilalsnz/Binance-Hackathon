@@ -1,0 +1,167 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Bot,
+  History,
+  LayoutDashboard,
+  Power,
+  Shield,
+  ShieldCheck,
+  SlidersHorizontal,
+} from "lucide-react";
+import { AgentGuardProvider, useAgentGuard } from "@/lib/store/AgentGuardProvider";
+import { cn } from "@/components/ui";
+
+const NAV = [
+  { href: "/app", label: "Home", icon: LayoutDashboard },
+  { href: "/app/agent", label: "Agent", icon: Bot },
+  { href: "/app/approvals", label: "Approvals", icon: ShieldCheck },
+  { href: "/app/policy", label: "Policy", icon: SlidersHorizontal },
+  { href: "/app/audit", label: "Audit", icon: History },
+] as const;
+
+function Brand() {
+  return (
+    <Link href="/app" className="row gap-2">
+      <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 via-violet-500 to-fuchsia-500 shadow-glow">
+        <Shield className="h-[18px] w-[18px] text-ink-950" strokeWidth={2.6} />
+      </span>
+      <span className="h-display text-[17px] text-white">
+        Agent<span className="text-gradient">Guard</span>
+      </span>
+    </Link>
+  );
+}
+
+function EmergencyStop() {
+  const { stopAgent } = useAgentGuard();
+  return (
+    <button
+      onClick={stopAgent}
+      title="Emergency stop — pause the agent"
+      aria-label="Emergency stop"
+      className="grid h-9 w-9 place-items-center rounded-xl border border-rose-400/30 bg-rose-500/15 text-rose-300 transition hover:bg-rose-500/30 active:scale-95"
+    >
+      <Power className="h-4 w-4" />
+    </button>
+  );
+}
+
+function ModeToggle() {
+  const { state, setMode } = useAgentGuard();
+  const demo = state.mode === "demo";
+  return (
+    <div className="flex rounded-xl border border-white/10 bg-white/[0.05] p-0.5 text-[11px] font-bold uppercase tracking-wide">
+      <button
+        onClick={() => setMode("demo")}
+        className={cn(
+          "rounded-[10px] px-2.5 py-1.5 transition",
+          demo ? "bg-cyan-400/90 text-ink-950 shadow" : "text-slate-400 hover:text-white"
+        )}
+      >
+        Demo
+      </button>
+      <button
+        onClick={() => setMode("live")}
+        className={cn(
+          "rounded-[10px] px-2.5 py-1.5 transition",
+          !demo ? "bg-amber-400/90 text-ink-950 shadow" : "text-slate-400 hover:text-white"
+        )}
+      >
+        Live
+      </button>
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-ink-950/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-14 w-full max-w-xl items-center justify-between px-4">
+        <Brand />
+        <div className="row gap-2">
+          <ModeToggle />
+          <EmergencyStop />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function BottomNav() {
+  const pathname = usePathname();
+  const { state } = useAgentGuard();
+  const approvalPing = state.events.some(
+    (e) => e.event === "policy-decision" && e.requiresApproval && e.approvalState === "awaiting"
+  );
+
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.07] bg-ink-950/90 backdrop-blur-xl">
+      <div
+        className="mx-auto grid w-full max-w-xl grid-cols-5"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        {NAV.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "relative flex flex-col items-center gap-1 pb-2 pt-2.5 text-[10px] font-semibold transition",
+                active ? "text-cyan-300" : "text-slate-500 hover:text-slate-300"
+              )}
+            >
+              <span className="relative">
+                <Icon className="h-[19px] w-[19px]" strokeWidth={active ? 2.4 : 2} />
+                {label === "Approvals" && approvalPing ? (
+                  <span className="absolute -right-1 -top-1 h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+                ) : null}
+              </span>
+              {label}
+              {active ? (
+                <span className="absolute top-0 h-0.5 w-8 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500" />
+              ) : null}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+function Boot() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <span className="grid h-12 w-12 animate-pulse place-items-center rounded-2xl bg-gradient-to-br from-cyan-400 via-violet-500 to-fuchsia-500">
+          <Shield className="h-6 w-6 text-ink-950" strokeWidth={2.6} />
+        </span>
+        <p className="text-xs uppercase tracking-widest muted">Loading your guardrails</p>
+      </div>
+    </div>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  const { hydrated } = useAgentGuard();
+  return (
+    <div className="min-h-screen">
+      <Header />
+      <main className="mx-auto w-full max-w-xl px-4 pb-32 pt-5">
+        {hydrated ? children : <Boot />}
+      </main>
+      <BottomNav />
+    </div>
+  );
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AgentGuardProvider>
+      <Shell>{children}</Shell>
+    </AgentGuardProvider>
+  );
+}

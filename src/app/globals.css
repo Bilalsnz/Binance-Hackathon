@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  @apply bg-ink-950 text-slate-100 font-sans antialiased;
+  background-image:
+    radial-gradient(60rem 40rem at 120% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
+    radial-gradient(50rem 32rem at -15% 12%, rgba(34, 211, 238, 0.12), transparent 55%);
+  background-attachment: fixed;
+}
+
+@layer base {
+  ::selection {
+    @apply bg-cyan-400/30 text-white;
+  }
+  h1, h2, h3 {
+    @apply font-display tracking-tight;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  input[type="range"] {
+    @apply accent-cyan-400;
+  }
+}
+
+@layer components {
+  /* ---- Surfaces ---- */
+  .card {
+    @apply rounded-2xl border border-white/10 bg-white/[0.045] shadow-card backdrop-blur-sm;
+  }
+  .card-soft {
+    @apply rounded-2xl border border-white/[0.06] bg-white/[0.025];
+  }
+  .card-pad {
+    @apply p-4 sm:p-5;
+  }
+
+  .divider {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent;
+  }
+
+  /* ---- Type helpers ---- */
+  .text-gradient {
+    @apply bg-gradient-to-r from-cyan-300 via-violet-300 to-fuchsia-300 bg-clip-text text-transparent;
+  }
+  .h-display {
+    @apply font-display font-semibold tracking-tight;
+  }
+
+  .muted {
+    @apply text-slate-400;
+  }
+
+  /* ---- Chips & pills ---- */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider;
+  }
+  .chip-ok {
+    @apply bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30;
+  }
+  .chip-critical {
+    @apply bg-rose-400/15 text-rose-300 ring-1 ring-rose-400/30;
+  }
+  .chip-pending {
+    @apply bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30;
+  }
+  .chip-info {
+    @apply bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/30;
+  }
+  .chip-violet {
+    @apply bg-violet-400/15 text-violet-300 ring-1 ring-violet-400/30;
+  }
+  .chip-plain {
+    @apply bg-white/[0.07] text-slate-300 ring-1 ring-white/10;
+  }
+
+  /* ---- Buttons ---- */
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45;
+  }
+  .btn-primary {
+    @apply bg-gradient-to-r from-cyan-400 to-violet-500 text-ink-950 shadow-glow hover:brightness-110;
+  }
+  .btn-ok {
+    @apply bg-gradient-to-r from-emerald-400 to-cyan-500 text-ink-950 shadow-glow hover:brightness-110;
+  }
+  .btn-danger {
+    @apply bg-gradient-to-r from-rose-500 to-rose-600 text-white shadow-glow-rose hover:brightness-110;
+  }
+  .btn-ghost {
+    @apply border border-white/10 bg-white/[0.05] text-slate-200 hover:bg-white/[0.09];
+  }
+  .btn-outline-danger {
+    @apply border border-rose-400/30 bg-rose-400/10 text-rose-300 hover:bg-rose-400/20;
+  }
+
+  /* ---- Misc ---- */
+  .mono {
+    @apply font-mono tabular-nums;
+  }
+  .label {
+    @apply text-[11px] font-semibold uppercase tracking-widest text-slate-500;
+  }
+  .field {
+    @apply w-full rounded-xl border border-white/10 bg-ink-900/80 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-400/20;
+  }
+  .glow-line {
+    @apply bg-gradient-to-r from-cyan-400/60 via-violet-400/60 to-fuchsia-400/60;
+  }
+  .row {
+    @apply flex items-center gap-2;
+  }
+}
+
+/* Scrollbar, subtle */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
