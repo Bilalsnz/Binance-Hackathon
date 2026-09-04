@@ -1,17 +1,18 @@
 "use client";
 
-import type { AuditEvent } from "@/lib/engine/types";
+import type { AuditEvent, Tone } from "@/lib/engine/types";
 import { DecisionCard } from "@/components/decision/DecisionCard";
 import { cn, ToneBadge, toneText } from "@/components/ui";
 import { clock } from "./time";
-import type { Tone } from "@/lib/engine/types";
 import {
   CheckCircle2,
   Info,
   Power,
   Search,
   Settings2,
+  ShieldAlert,
   ShieldCheck,
+  ShieldQuestion,
   Sparkles,
   XCircle,
   type LucideIcon,
@@ -27,6 +28,20 @@ const EVENT_ICON: Partial<Record<AuditEvent["event"], LucideIcon>> = {
   "policy-updated": Settings2,
   system: Info,
 };
+
+function iconBg(tone: Tone): string {
+  switch (tone) {
+    case "ok":
+      return "bg-emerald-400/10 ring-emerald-400/20";
+    case "critical":
+      return "bg-rose-400/10 ring-rose-400/20";
+    case "pending":
+    case "warn":
+      return "bg-amber-400/10 ring-amber-400/20";
+    default:
+      return "bg-cyan-400/10 ring-cyan-400/20";
+  }
+}
 
 function Meta({ event }: { event: AuditEvent }) {
   return (
@@ -46,21 +61,6 @@ function Meta({ event }: { event: AuditEvent }) {
   );
 }
 
-/** Verdict chip so a scanning judge sees APPROVED / BLOCKED / NEEDS OK at a glance. */
-function VerdictChip({ event }: { event: AuditEvent }) {
-  if (event.event !== "policy-decision") return null;
-  const awaiting =
-    event.verdict === "approved" && event.requiresApproval && event.approvalState === "awaiting";
-  const declined = event.verdict === "approved" && event.approvalState === "rejected";
-  const label = event.verdict === "blocked" ? "Blocked" : awaiting ? "Needs your OK" : declined ? "Declined" : "Approved";
-  const tone: Tone = event.verdict === "blocked" ? "critical" : awaiting ? "pending" : declined ? "warn" : "ok";
-  return (
-    <span className="shrink-0">
-      <ToneBadge tone={tone}>{label}</ToneBadge>
-    </span>
-  );
-}
-
 /** Compact timeline row for non-decision activity. */
 export function FeedRow({ event, dense }: { event: AuditEvent; dense?: boolean }) {
   const Icon = EVENT_ICON[event.event] ?? Info;
@@ -76,14 +76,11 @@ export function FeedRow({ event, dense }: { event: AuditEvent; dense?: boolean }
         <Icon className={cn("h-4 w-4", toneText(event.tone))} strokeWidth={2.2} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="row items-start justify-between gap-2">
-          <p className={cn("min-w-0 leading-snug", dense ? "text-[13px]" : "text-sm")}>
-            <span className={cn("text-slate-100", event.event === "policy-updated" && "font-semibold")}>
-              {event.summary}
-            </span>
-          </p>
-          <VerdictChip event={event} />
-        </div>
+        <p className={cn("leading-snug", dense ? "text-[13px]" : "text-sm")}>
+          <span className={cn("text-slate-100", event.event === "policy-updated" && "font-semibold")}>
+            {event.summary}
+          </span>
+        </p>
         <div className="mt-1">
           <Meta event={event} />
         </div>
@@ -97,30 +94,109 @@ export function FeedRow({ event, dense }: { event: AuditEvent; dense?: boolean }
   );
 }
 
-function iconBg(tone: Tone): string {
-  switch (tone) {
-    case "ok":
-      return "bg-emerald-400/10 ring-emerald-400/20";
-    case "critical":
-      return "bg-rose-400/10 ring-rose-400/20";
-    case "pending":
-    case "warn":
-      return "bg-amber-400/10 ring-amber-400/20";
-    default:
-      return "bg-cyan-400/10 ring-cyan-400/20";
-  }
+/**
+ * Audit-page story row for a policy decision. Compact enough for a history
+ * list but complete: proposal → verdict chip → exact reason → what the human
+ * did → whether a demo fill executed.
+ */
+function AuditDecision({
+  event,
+  executed,
+}: {
+  event: AuditEvent;
+  executed: boolean;
+}) {
+  const action = event.action;
+  if (!action) return null;
+
+  const blocked = event.verdict === "blocked";
+  const awaiting =
+    event.verdict === "approved" && event.requiresApproval && event.approvalState === "awaiting";
+  const declined = event.verdict === "approved" && event.approvalState === "rejected";
+
+  const chip: { label: string; tone: Tone } = blocked
+    ? { label: "Blocked", tone: "critical" }
+    : awaiting
+      ? { label: "Needs your OK", tone: "pending" }
+      : declined
+        ? { label: "Declined", tone: "warn" }
+        : { label: "Approved", tone: "ok" };
+
+  const Icon = blocked ? ShieldAlert : awaiting ? ShieldQuestion : declined ? XCircle : ShieldCheck;
+
+  return (
+    <div className="row items-start gap-3 py-2.5">
+      <span
+        className={cn(
+          "mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl ring-1",
+          blocked
+            ? "bg-rose-400/10 ring-rose-400/25 text-rose-300"
+            : awaiting
+              ? "bg-amber-400/10 ring-amber-400/25 text-amber-300"
+              : declined
+                ? "bg-slate-400/10 ring-slate-400/25 text-slate-300"
+                : "bg-emerald-400/10 ring-emerald-400/25 text-emerald-300"
+        )}
+      >
+        <Icon className="h-4 w-4" strokeWidth={2.2} />
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <div className="row items-start justify-between gap-2">
+          <p className="min-w-0 truncate text-[13px] font-semibold text-white">
+            {action.side === "buy" ? "Buy" : "Sell"} {action.symbol} · $
+            {Math.round(action.notionalUsd).toLocaleString("en-US")}
+          </p>
+          <span className="shrink-0">
+            <ToneBadge tone={chip.tone}>{chip.label}</ToneBadge>
+          </span>
+        </div>
+
+        <div
+          className={cn(
+            "mt-1 text-xs leading-relaxed",
+            blocked
+              ? "text-rose-300/90"
+              : awaiting
+                ? "text-amber-200/90"
+                : declined
+                  ? "text-slate-400"
+                  : "text-emerald-200/90"
+          )}
+        >
+          {blocked
+            ? `${event.reason ?? "A policy rule failed."}`
+            : awaiting
+              ? "Passes every rule — waiting for your OK."
+              : declined
+                ? "You declined it — nothing was executed."
+                : executed
+                  ? "Approved · simulated demo fill executed."
+                  : "Approved."}
+        </div>
+
+        <div className="mt-1">
+          <Meta event={event} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**
- * The audit feed. Policy decisions render as full Decision Cards; everything
- * else as compact rows. Pass events already in display order.
+ * The audit feed. Policy decisions render as full Decision Cards on the agent
+ * screen or as compact story rows on the audit page; everything else renders
+ * as compact rows. Pass events already in display order. `executedActionIds`
+ * lets the audit story attach execution state to each decision.
  */
 export function EventFeed({
   events,
   dense = false,
+  executedActionIds,
 }: {
   events: AuditEvent[];
   dense?: boolean;
+  executedActionIds?: Set<string>;
 }) {
   if (events.length === 0) {
     return (
@@ -134,10 +210,12 @@ export function EventFeed({
       {events.map((e) => (
         <li
           key={e.id}
-          className={cn("animate-slide-in py-1", e.event === "policy-decision" && "py-3")}
+          className={cn("animate-slide-in py-1", e.event === "policy-decision" && "py-2.5")}
         >
           {e.event === "policy-decision" && !dense ? (
             <DecisionCard event={e} />
+          ) : e.event === "policy-decision" && dense ? (
+            <AuditDecision event={e} executed={executedActionIds?.has(e.action?.id ?? "") ?? false} />
           ) : (
             <FeedRow event={e} dense={dense} />
           )}

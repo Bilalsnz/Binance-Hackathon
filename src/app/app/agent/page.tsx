@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 import { EventFeed } from "@/components/feed/EventFeed";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
-import { AGENT_NAME } from "@/lib/demo/script";
+import { AGENT_NAME, DEMO_SCRIPT } from "@/lib/demo/script";
 import { agentStatusMeta, Btn, ToneBadge } from "@/components/ui";
 
 const PIPELINE = ["Research", "Propose", "Policy check", "Approve", "Execute"];
@@ -44,35 +44,42 @@ export default function AgentPage() {
 
       {/* Pipeline strip */}
       <div className="card card-pad">
-        <div className="flex flex-wrap items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-          {(() => {
-            const phase =
-              state.status === "researching"
-                ? 0
-                : state.status === "proposing"
-                  ? 1
-                  : state.status === "awaiting-approval"
-                    ? 3
-                    : state.scriptDone
-                      ? 5
-                      : -1;
-            return PIPELINE.map((step, i) => (
-              <span key={step} className="row gap-1">
-                {i > 0 ? <ArrowRight className="h-3 w-3 text-slate-700" /> : null}
-                <span
-                  className={
-                    phase === i
-                      ? "text-cyan-300"
-                      : phase > i
-                        ? "text-slate-300"
-                        : "text-slate-600"
-                  }
-                >
-                  {step}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            {(() => {
+              const phase =
+                state.status === "researching"
+                  ? 0
+                  : state.status === "proposing"
+                    ? 1
+                    : state.status === "awaiting-approval"
+                      ? 3
+                      : state.scriptDone
+                        ? 5
+                        : -1;
+              return PIPELINE.map((step, i) => (
+                <span key={step} className="row gap-1">
+                  {i > 0 ? <ArrowRight className="h-3 w-3 text-slate-700" /> : null}
+                  <span
+                    className={
+                      phase === i
+                        ? "text-cyan-300"
+                        : phase > i
+                          ? "text-slate-300"
+                          : "text-slate-600"
+                    }
+                  >
+                    {step}
+                  </span>
                 </span>
-              </span>
-            ));
-          })()}
+              ));
+            })()}
+          </div>
+          {state.scriptIndex > 0 && !state.scriptDone ? (
+            <span className="shrink-0 rounded-full bg-white/[0.06] px-2 py-1 text-[10px] font-semibold tabular-nums text-slate-400">
+              step {Math.min(state.scriptIndex, DEMO_SCRIPT.length)}/{DEMO_SCRIPT.length}
+            </span>
+          ) : null}
         </div>
       </div>
 

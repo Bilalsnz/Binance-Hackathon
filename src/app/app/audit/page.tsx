@@ -36,6 +36,18 @@ export default function AuditPage() {
     };
   }, [state.events]);
 
+  // action ids that produced a simulated demo fill — lets each audit row show
+  // its own execution state even when the executed event is filtered out.
+  const executedActionIds = useMemo(
+    () =>
+      new Set(
+        state.events
+          .filter((e) => e.event === "executed" && e.action)
+          .map((e) => e.action!.id)
+      ),
+    [state.events]
+  );
+
   const FILTERS: Array<{ id: Filter; label: string }> = [
     { id: "all", label: "All" },
     { id: "approved", label: `Approved · ${counts.approved}` },
@@ -81,7 +93,7 @@ export default function AuditPage() {
         </div>
       ) : (
         <div className="card card-pad">
-          <EventFeed events={events} dense />
+          <EventFeed events={events} dense executedActionIds={executedActionIds} />
         </div>
       )}
 

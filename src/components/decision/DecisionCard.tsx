@@ -123,6 +123,9 @@ export function DecisionCard({ event, embed = false }: { event: AuditEvent; embe
             <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
             <span>
               <span className="font-semibold">Denied by your policy. </span>
+              <span className="font-bold text-rose-100">
+                {ruleLabelOf(event.checks?.find((c) => !c.passed)?.rule ?? "capital")}:
+              </span>{" "}
               {event.reason}
             </span>
           </div>

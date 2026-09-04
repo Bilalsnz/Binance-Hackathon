@@ -30,16 +30,17 @@ USER GOAL → AGENT RESEARCH → PROPOSED ACTION → POLICY CHECK → APPROVED /
 ### The judge flow (60 seconds, zero setup)
 
 1. Open **AgentGuard → Home → “Run the 60-second demo”**.
-2. The demo agent `Nova` researches BTC, then proposes **Buy $100 BTC (spot)** → policy passes →
-   **APPROVED — needs your OK**.
-3. You tap **Approve** on the decision card → demo broker executes (simulated fill) → audit logged.
+2. Agent `Nova` researches BTC, then proposes **Buy $100 BTC (spot)** → policy passes → **APPROVED — needs your OK**. The run pauses here.
+3. You tap **Approve** on the decision card → demo broker executes (simulated fill) → audit logged → the run resumes.
 4. Nova proposes **Buy $250 BTC** → **BLOCKED** (exceeds the $150 position cap).
 5. Nova proposes **Buy $80 SOL** → **BLOCKED** (SOL not on the allowlist).
 6. Nova proposes a **BTC futures long** → **BLOCKED** (derivatives disabled).
 7. Nova tries to **withdraw $40** → **BLOCKED** (withdrawals disabled).
-8. Nova proposes **Buy $60 ETH** → **APPROVED** → audit trail shows every decision, result and reason.
+8. Nova proposes **Buy $60 ETH** → **APPROVED — needs your OK**, a second human pause; approve it and the run finishes.
+9. Open **Audit** → every decision is there: proposal, policy result, exact reason, approval state and execution state. Filter to **Blocked** to see all four blocked verdicts at a glance.
 
 Change the policy and replay — the *same* agent behaves differently, because the engine is real logic.
+(The demo pauses twice on purpose: approving an action is the point of the product.)
 
 ---
 

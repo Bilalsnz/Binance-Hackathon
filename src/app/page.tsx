@@ -131,7 +131,7 @@ export default function Landing() {
               <span className="row gap-1.5 text-xs font-semibold text-slate-200">
                 <ShieldCheck className="h-4 w-4 text-cyan-300" /> Nova · mandate: BTC+ETH, $150 max, spot only
               </span>
-              <span className="chip chip-info">live simulation</span>
+              <span className="chip chip-info">demo preview · no real orders</span>
             </div>
             <div className="grid gap-2">
               {SHOWCASE.map((s) => (

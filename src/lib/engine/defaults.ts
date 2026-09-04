@@ -3,13 +3,17 @@ import type { Policy } from "./types";
 /**
  * Defaults for the demo experience and the pre-loaded sample policy.
  * The values mirror the judge script from the brief:
- *   allow BTC + ETH · $150 max position · $20 max loss · spot only ·
- *   withdrawals off · approval required.
+ *   allow BTC + ETH · $500 capital ceiling · $150 max position ·
+ *   $20 max loss · spot only · withdrawals off · approval required.
+ *
+ * The $500 ceiling is deliberately above any single demo order so the
+ * $250 BTC proposal is blocked by the *position* cap ($150), not the
+ * aggregate ceiling — giving the judge one crisp reason per verdict.
  */
 
 export const DEFAULT_POLICY: Policy = {
   name: "Guardian mandate",
-  maxCapitalUsd: 300,
+  maxCapitalUsd: 500,
   allowedAssets: ["BTC", "ETH"],
   maxPositionUsd: 150,
   maxLossPerTradeUsd: 20,

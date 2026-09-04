@@ -71,14 +71,15 @@ AuditEvent            one row of the trail (id · seq · ts · event · tone · 
 | Policy engine | `src/lib/engine/policy.ts` | Pure `evaluateAction`; 6 deterministic rules |
 | Domain types | `src/lib/engine/types.ts` | Serialisable contracts + audit events |
 | Defaults | `src/lib/engine/defaults.ts` | Sample “Guardian mandate” matching the judge script |
-| Demo script | `src/lib/demo/script.ts` | The 8-step timeline Nova follows; verdicts are *not* pre-decided |
+| Demo script | `src/lib/demo/script.ts` | The 9-beat timeline Nova follows (3 research beats + 6 proposals); verdicts are *not* pre-decided |
 | Quotes | `src/lib/demo/quotes.ts` | Labelled fallback quotes (never presented as live) |
 | Market data | `src/lib/market.ts` + `/api/market/snapshot` | Keyless Binance public `ticker/24hr` with live/fallback |
 | State machine | `src/lib/store/state.ts` | Reducer, exposure & pending derivations |
 | Runner | `src/lib/store/AgentGuardProvider.tsx` | The agent loop: advance script → propose → engine → approve/execute; emergency stop; persistence |
 | Persistence | `src/lib/store/storage.ts` | localStorage slice (policy · audit · progress) |
-| Shell | `src/components/app/AppShell.tsx` | Header (mode, emergency stop), bottom nav, hydration gate |
-| Decision UI | `src/components/decision/DecisionCard.tsx` | Verdict card: action, checks, reason, Approve/Decline |
+| Shell | `src/components/app/AppShell.tsx` | Header (mode, emergency stop), bottom nav, ErrorBoundary; **content is never gated on hydration** — children render in static HTML, so a slow/failed client effect can never freeze the app |
+| Decision UI | `src/components/decision/DecisionCard.tsx` | Verdict card: action, checks, reason (blocked rows prefix the failing rule), Approve/Decline |
+| Audit feed | `src/components/feed/EventFeed.tsx` | Rich feed + dense audit rows; each decision row shows proposal → verdict chip → exact reason → approval state → execution state |
 
 ## Threading model (client-only, no server database)
 

@@ -131,7 +131,7 @@ export const DEMO_SCRIPT: DemoScriptStep[] = [
     notionalUsd: 60,
     estRiskUsd: 9,
     reason:
-      "Add a modest ETH position after confirmation; keeps aggregate exposure inside the $300 capital ceiling.",
+      "Add a modest ETH position after confirmation; keeps aggregate exposure inside the $500 capital ceiling.",
     thinkMs: 900,
   },
 ];

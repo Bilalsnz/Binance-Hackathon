@@ -43,7 +43,8 @@ export function RecentDecisions() {
 }
 
 function DecisionRow({ e }: { e: AuditEvent }) {
-  const ok = e.verdict === "approved";
+  const awaiting = e.verdict === "approved" && e.requiresApproval && e.approvalState === "awaiting";
+  const declined = e.verdict === "approved" && e.approvalState === "rejected";
   return (
     <li className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
       <div className="min-w-0">
@@ -52,8 +53,11 @@ function DecisionRow({ e }: { e: AuditEvent }) {
           {dayClock(e.ts)} · {e.action?.symbol}
         </p>
       </div>
-      <ToneBadge tone={ok ? "ok" : "critical"} className="shrink-0">
-        {ok ? "Approved" : "Blocked"}
+      <ToneBadge
+        tone={e.verdict === "blocked" ? "critical" : awaiting ? "pending" : declined ? "warn" : "ok"}
+        className="shrink-0"
+      >
+        {e.verdict === "blocked" ? "Blocked" : awaiting ? "Needs your OK" : declined ? "Declined" : "Approved"}
       </ToneBadge>
     </li>
   );
