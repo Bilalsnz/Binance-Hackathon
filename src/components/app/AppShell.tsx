@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { AgentGuardProvider, useAgentGuard } from "@/lib/store/AgentGuardProvider";
+import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import { cn } from "@/components/ui";
 
 const NAV = [
@@ -132,26 +133,18 @@ function BottomNav() {
   );
 }
 
-function Boot() {
-  return (
-    <div className="flex min-h-[50vh] items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <span className="grid h-12 w-12 animate-pulse place-items-center rounded-2xl bg-gradient-to-br from-cyan-400 via-violet-500 to-fuchsia-500">
-          <Shield className="h-6 w-6 text-ink-950" strokeWidth={2.6} />
-        </span>
-        <p className="text-xs uppercase tracking-widest muted">Loading your guardrails</p>
-      </div>
-    </div>
-  );
-}
-
+/**
+ * Content is never gated on hydration: children render immediately (they are
+ * part of the static HTML too), so a slow or failing client effect can never
+ * leave the app frozen on a loading screen. An error boundary keeps any render
+ * failure visible and recoverable instead of blank.
+ */
 function Shell({ children }: { children: React.ReactNode }) {
-  const { hydrated } = useAgentGuard();
   return (
     <div className="min-h-screen">
       <Header />
       <main className="mx-auto w-full max-w-xl px-4 pb-32 pt-5">
-        {hydrated ? children : <Boot />}
+        <ErrorBoundary>{children}</ErrorBoundary>
       </main>
       <BottomNav />
     </div>

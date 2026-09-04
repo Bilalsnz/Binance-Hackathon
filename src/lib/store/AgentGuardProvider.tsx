@@ -76,10 +76,16 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Hydrate from localStorage once, then keep persisting on every change.
+  // `hydrated` flips FIRST and unconditionally: content is never gated on it,
+  // and no storage error can ever strand the app on a boot screen.
   useEffect(() => {
-    const persisted = loadPersisted();
-    if (persisted) dispatch({ type: "hydrate", patch: persisted });
     setHydrated(true);
+    try {
+      const persisted = loadPersisted();
+      if (persisted) dispatch({ type: "hydrate", patch: persisted });
+    } catch {
+      /* never block boot on a storage read */
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
