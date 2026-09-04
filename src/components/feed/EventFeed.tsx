@@ -2,7 +2,7 @@
 
 import type { AuditEvent } from "@/lib/engine/types";
 import { DecisionCard } from "@/components/decision/DecisionCard";
-import { cn, toneText } from "@/components/ui";
+import { cn, ToneBadge, toneText } from "@/components/ui";
 import { clock } from "./time";
 import type { Tone } from "@/lib/engine/types";
 import {
@@ -46,6 +46,21 @@ function Meta({ event }: { event: AuditEvent }) {
   );
 }
 
+/** Verdict chip so a scanning judge sees APPROVED / BLOCKED / NEEDS OK at a glance. */
+function VerdictChip({ event }: { event: AuditEvent }) {
+  if (event.event !== "policy-decision") return null;
+  const awaiting =
+    event.verdict === "approved" && event.requiresApproval && event.approvalState === "awaiting";
+  const declined = event.verdict === "approved" && event.approvalState === "rejected";
+  const label = event.verdict === "blocked" ? "Blocked" : awaiting ? "Needs your OK" : declined ? "Declined" : "Approved";
+  const tone: Tone = event.verdict === "blocked" ? "critical" : awaiting ? "pending" : declined ? "warn" : "ok";
+  return (
+    <span className="shrink-0">
+      <ToneBadge tone={tone}>{label}</ToneBadge>
+    </span>
+  );
+}
+
 /** Compact timeline row for non-decision activity. */
 export function FeedRow({ event, dense }: { event: AuditEvent; dense?: boolean }) {
   const Icon = EVENT_ICON[event.event] ?? Info;
@@ -61,11 +76,14 @@ export function FeedRow({ event, dense }: { event: AuditEvent; dense?: boolean }
         <Icon className={cn("h-4 w-4", toneText(event.tone))} strokeWidth={2.2} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className={cn("leading-snug", dense ? "text-[13px]" : "text-sm")}>
-          <span className={cn("text-slate-100", event.event === "policy-updated" && "font-semibold")}>
-            {event.summary}
-          </span>
-        </p>
+        <div className="row items-start justify-between gap-2">
+          <p className={cn("min-w-0 leading-snug", dense ? "text-[13px]" : "text-sm")}>
+            <span className={cn("text-slate-100", event.event === "policy-updated" && "font-semibold")}>
+              {event.summary}
+            </span>
+          </p>
+          <VerdictChip event={event} />
+        </div>
         <div className="mt-1">
           <Meta event={event} />
         </div>
