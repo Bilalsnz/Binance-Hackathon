@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { AgentPanel } from "@/components/dashboard/AgentPanel";
+import { ScenarioDeck } from "@/components/dashboard/ScenarioDeck";
 import { PolicySummary } from "@/components/dashboard/PolicySummary";
 import { ConnectionCard } from "@/components/dashboard/ConnectionCard";
 import { RecentDecisions } from "@/components/dashboard/RecentDecisions";
@@ -28,9 +29,11 @@ export default function DashboardPage() {
       {pending.length > 0 ? (
         <Link
           href="/app/approvals"
-          className="row gap-2 rounded-2xl border border-amber-400/30 bg-gradient-to-r from-amber-400/15 to-orange-400/10 px-4 py-3 text-sm font-semibold text-amber-200 transition hover:brightness-110"
+          className="pressable row gap-2 rounded-2xl border border-amber-400/30 bg-gradient-to-r from-amber-400/15 to-orange-400/10 px-4 py-3 text-sm font-semibold text-amber-200 hover:brightness-110"
         >
-          <ShieldAlert className="h-5 w-5 text-amber-300" />
+          <span className="grid h-6 min-w-6 place-items-center rounded-full bg-amber-400 px-1.5 text-xs font-bold text-ink-950">
+            {pending.length}
+          </span>
           <span className="flex-1">
             {pending.length} action{pending.length > 1 ? "s" : ""} waiting on your approval
           </span>
@@ -39,6 +42,7 @@ export default function DashboardPage() {
       ) : null}
 
       <AgentPanel />
+      <ScenarioDeck />
       <PolicySummary />
       <ConnectionCard />
       <RecentDecisions />

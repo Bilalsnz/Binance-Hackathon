@@ -63,7 +63,9 @@ export const DEMO_SCRIPT: DemoScriptStep[] = [
     market: "spot",
     kind: "trade",
     notionalUsd: 250,
-    estRiskUsd: 30,
+    // Stop-loss keeps worst case under the $20 loss cap — so the ONE reason
+    // this is denied is the $150 position cap, not the risk rule.
+    estRiskUsd: 15,
     reason:
       "Momentum looks strong — raise the position to $250 to capture more upside.",
     thinkMs: 650,

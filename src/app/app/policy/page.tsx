@@ -1,6 +1,7 @@
 "use client";
 
 import { PolicyBuilder } from "@/components/policy/PolicyBuilder";
+import { AGENT_NAME } from "@/lib/demo/script";
 
 export default function PolicyPage() {
   return (
@@ -8,8 +9,8 @@ export default function PolicyPage() {
       <header>
         <h1 className="h-display text-2xl text-white">Policy builder</h1>
         <p className="mt-1 text-sm muted">
-          Set the mandate {`Nova`} must obey. Every proposed action is checked against these rules
-          by a deterministic engine — no opinions, no guesswork.
+          Set the mandate {AGENT_NAME} must obey. Every proposed action is checked against these
+          rules by a deterministic engine — no opinions, no guesswork.
         </p>
       </header>
       <PolicyBuilder />

@@ -27,9 +27,16 @@ import type {
 } from "@/lib/engine/types";
 import { evaluateAction } from "@/lib/engine/policy";
 import { AGENT_NAME, DEMO_SCRIPT, type DemoScriptStep } from "@/lib/demo/script";
+import { SCENARIOS } from "@/lib/demo/scenarios";
 import { quoteToUsd } from "@/lib/demo/quotes";
 import { isoNow, mkEvent, summarizeDecision, uid } from "./events";
 import { loadPersisted, persistState } from "./storage";
+
+/** What happened after the user tapped a quick-launch scenario. */
+export type ScenarioOutcome =
+  | { verdict: "blocked"; reason?: string; rule?: string }
+  | { verdict: "needs-ok"; reason?: string }
+  | { verdict: "approved"; reason?: string };
 
 interface AgentGuardApi {
   state: AppState;
@@ -45,6 +52,8 @@ interface AgentGuardApi {
   reject: (eventId: string) => void;
   setPolicy: (policy: Policy) => void;
   setMode: (mode: Mode) => void;
+  /** Run ONE quick-launch scenario through the real engine (Demo Mode only). */
+  playScenario: (scenarioId: string) => Promise<ScenarioOutcome | null>;
 }
 
 const Ctx = createContext<AgentGuardApi | null>(null);
@@ -344,6 +353,11 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
       // While the emergency stop is engaged we record intent but stay frozen —
       // nothing executes and the agent does not continue.
       const frozen = s.status === "stopped";
+      // A full scripted demo marches on after the OK; a single quick-launch
+      // scenario settles back instead (so an approval can never silently start
+      // the whole 60-second script from step zero).
+      const wasScripted = s.scripted;
+      const stillAwaiting = pendingApprovals(s.events).some((e) => e.id !== eventId);
 
       // Re-check against the *current* policy in case it changed while waiting.
       const decision = evaluateAction(
@@ -387,7 +401,15 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
           ],
         });
       }
-      if (!frozen) schedule(() => advance(), 700);
+      if (frozen) return; // stay stopped — intent recorded, nothing continues
+      if (wasScripted && !stillAwaiting) {
+        schedule(() => advance(), 700);
+      } else {
+        dispatch({
+          type: "set-status",
+          status: stillAwaiting ? "awaiting-approval" : "idle",
+        });
+      }
     },
     [advance, executedFollowups, schedule, stampEvent]
   );
@@ -399,6 +421,8 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
       if (!base || !base.action) return;
       const action = base.action;
       const frozen = stateRef.current.status === "stopped";
+      const wasScripted = s.scripted;
+      const stillAwaiting = pendingApprovals(s.events).some((e) => e.id !== eventId);
       dispatch({
         type: "resolve-approval",
         eventId,
@@ -413,9 +437,112 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
           }),
         ],
       });
-      if (!frozen) schedule(() => advance(), 700);
+      if (frozen) return; // stay stopped
+      if (wasScripted && !stillAwaiting) {
+        schedule(() => advance(), 700);
+      } else {
+        dispatch({
+          type: "set-status",
+          status: stillAwaiting ? "awaiting-approval" : "idle",
+        });
+      }
     },
     [advance, schedule, stampEvent]
+  );
+
+  /**
+   * Run a single quick-launch scenario through the real engine. Demo Mode only;
+   * the trail is preserved (scenarios append to it), the context switches to
+   * ad-hoc so nothing here can resume a scripted demo, and the human approval
+   * gate works exactly as it does mid-demo. Resolves with the verdict so the UI
+   * can navigate to the right place (approvals vs. the decision feed).
+   */
+  const playScenario = useCallback(
+    async (scenarioId: string): Promise<ScenarioOutcome | null> => {
+      const s0 = stateRef.current;
+      if (s0.mode !== "demo") return null; // Live view is reference-only.
+      const sc = SCENARIOS.find((x) => x.id === scenarioId);
+      if (!sc) return null;
+      clearTimers();
+      const step = DEMO_SCRIPT[sc.index];
+      if (!step || step.type !== "action") return null;
+      const action = actionFromStep(step);
+      dispatch({ type: "set-script", scripted: false });
+      dispatch({ type: "set-status", status: "proposing" });
+
+      return new Promise<ScenarioOutcome | null>((resolve) => {
+        schedule(() => {
+          const s = stateRef.current;
+          const decision = evaluateAction(
+            s.policy,
+            action,
+            computeExposure(s.events)
+          );
+          const reason = decision.blockedBy[0]?.detail;
+          const rule = decision.blockedBy[0]?.rule;
+          if (decision.state === "blocked") {
+            dispatch({
+              type: "append",
+              events: [
+                stampEvent({
+                  event: "policy-decision",
+                  actor: AGENT_NAME,
+                  summary: summarizeDecision(action, decision),
+                  tone: "critical",
+                  action,
+                  checks: decision.checks,
+                  verdict: "blocked",
+                  reason,
+                }),
+              ],
+            });
+            dispatch({ type: "set-status", status: "idle" });
+            resolve({ verdict: "blocked", reason, rule });
+            return;
+          }
+          if (decision.requiresApproval) {
+            dispatch({
+              type: "append",
+              events: [
+                stampEvent({
+                  event: "policy-decision",
+                  actor: AGENT_NAME,
+                  summary: summarizeDecision(action, decision),
+                  tone: "pending",
+                  action,
+                  checks: decision.checks,
+                  verdict: "approved",
+                  requiresApproval: true,
+                  approvalState: "awaiting",
+                }),
+              ],
+            });
+            dispatch({ type: "set-status", status: "awaiting-approval" });
+            resolve({ verdict: "needs-ok", reason: decision.blockedBy[0]?.detail });
+            return;
+          }
+          // Approved with no human gate → execute the simulated fill.
+          dispatch({
+            type: "append",
+            events: [
+              stampEvent({
+                event: "policy-decision",
+                actor: AGENT_NAME,
+                summary: summarizeDecision(action, decision),
+                tone: "ok",
+                action,
+                checks: decision.checks,
+                verdict: "approved",
+              }),
+              ...executedFollowups(action),
+            ],
+          });
+          dispatch({ type: "set-status", status: "idle" });
+          resolve({ verdict: "approved", reason: decision.blockedBy[0]?.detail });
+        }, 700);
+      });
+    },
+    [actionFromStep, clearTimers, executedFollowups, schedule, stampEvent]
   );
 
   const setPolicy = useCallback(
@@ -481,6 +608,7 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
     reject,
     setPolicy,
     setMode,
+    playScenario,
   };
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

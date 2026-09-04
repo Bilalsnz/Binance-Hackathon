@@ -20,6 +20,12 @@ export interface AppState {
   /** Position in the demo script (0 = not started). */
   scriptIndex: number;
   scriptDone: boolean;
+  /**
+   * True while the feed belongs to a full scripted demo run. Single scenarios
+   * played from the dashboard set this to false so an approval can never
+   * resume the full script mid-way (the two flows stay distinct).
+   */
+  scripted: boolean;
   /** Latest market snapshot (live Binance or labelled fallback). */
   snapshot: MarketResult | null;
 }
@@ -30,7 +36,7 @@ export type AppAction =
   | { type: "set-policy"; policy: Policy }
   | { type: "set-status"; status: AgentStatus }
   | { type: "set-snapshot"; snapshot: MarketResult | null }
-  | { type: "set-script"; scriptIndex?: number; done?: boolean }
+  | { type: "set-script"; scriptIndex?: number; done?: boolean; scripted?: boolean }
   | { type: "append"; events: AuditEvent[] }
   | {
       type: "resolve-approval";
@@ -48,6 +54,7 @@ export const initialState: AppState = {
   events: [],
   scriptIndex: 0,
   scriptDone: false,
+  scripted: false,
   snapshot: null,
 };
 
@@ -79,7 +86,7 @@ export function reducer(state: AppState, action: AppAction): AppState {
       return { ...state, ...action.patch, status: "idle" };
 
     case "begin-demo":
-      return { ...state, events: [], scriptIndex: 0, scriptDone: false, status: "running" };
+      return { ...state, events: [], scriptIndex: 0, scriptDone: false, scripted: true, status: "running" };
 
     case "clear-all":
       return {
@@ -106,6 +113,7 @@ export function reducer(state: AppState, action: AppAction): AppState {
         ...state,
         scriptIndex: action.scriptIndex ?? state.scriptIndex,
         scriptDone: action.done ?? state.scriptDone,
+        scripted: action.scripted ?? state.scripted,
       };
 
     case "append": {

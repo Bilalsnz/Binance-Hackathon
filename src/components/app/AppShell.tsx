@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bot,
+  Cable,
+  FlaskConical,
   History,
   LayoutDashboard,
   Power,
@@ -40,6 +42,7 @@ function EmergencyStop() {
   const { stopAgent } = useAgentGuard();
   return (
     <button
+      type="button"
       onClick={stopAgent}
       title="Emergency stop — pause the agent"
       aria-label="Emergency stop"
@@ -54,23 +57,39 @@ function ModeToggle() {
   const { state, setMode } = useAgentGuard();
   const demo = state.mode === "demo";
   return (
-    <div className="flex rounded-xl border border-white/10 bg-white/[0.05] p-0.5 text-[11px] font-bold uppercase tracking-wide">
+    <div
+      role="group"
+      aria-label="App mode — Demo or Live"
+      className="flex rounded-xl border border-white/10 bg-white/[0.05] p-0.5 text-[11px] font-bold uppercase tracking-wide"
+    >
       <button
+        type="button"
+        aria-pressed={demo}
         onClick={() => setMode("demo")}
+        title="Demo Mode — simulated broker, nothing real moves"
         className={cn(
-          "rounded-[10px] px-2.5 py-1.5 transition",
-          demo ? "bg-cyan-400/90 text-ink-950 shadow" : "text-slate-400 hover:text-white"
+          "row gap-1.5 rounded-[10px] px-2.5 py-1.5 transition active:scale-95",
+          demo
+            ? "bg-gradient-to-r from-cyan-400 to-cyan-500 text-ink-950 shadow"
+            : "text-slate-400 hover:bg-white/[0.06] hover:text-white"
         )}
       >
+        <FlaskConical className={cn("h-3.5 w-3.5", !demo && "opacity-50")} />
         Demo
       </button>
       <button
+        type="button"
+        aria-pressed={!demo}
         onClick={() => setMode("live")}
+        title="Live view — reference only; AgentGuard never connects from the web"
         className={cn(
-          "rounded-[10px] px-2.5 py-1.5 transition",
-          !demo ? "bg-amber-400/90 text-ink-950 shadow" : "text-slate-400 hover:text-white"
+          "row gap-1.5 rounded-[10px] px-2.5 py-1.5 transition active:scale-95",
+          !demo
+            ? "bg-gradient-to-r from-amber-400 to-orange-500 text-ink-950 shadow"
+            : "text-slate-400 hover:bg-white/[0.06] hover:text-white"
         )}
       >
+        <Cable className={cn("h-3.5 w-3.5", demo && "opacity-50")} />
         Live
       </button>
     </div>

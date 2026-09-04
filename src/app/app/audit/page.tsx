@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { History, ShieldAlert, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { History, Play, ShieldAlert, ShieldCheck } from "lucide-react";
 import { EventFeed } from "@/components/feed/EventFeed";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
 import { cn } from "@/components/ui";
@@ -9,8 +9,17 @@ import { cn } from "@/components/ui";
 type Filter = "all" | "approved" | "blocked" | "activity";
 
 export default function AuditPage() {
-  const { state } = useAgentGuard();
+  const { state, runDemo, setMode } = useAgentGuard();
   const [filter, setFilter] = useState<Filter>("all");
+
+  // Deep links from the dashboard stats (?filter=blocked etc.) pre-select a
+  // filter once on mount — read from the URL only, never written back.
+  useEffect(() => {
+    const f = new URLSearchParams(window.location.search).get("filter");
+    if (f === "approved" || f === "blocked" || f === "activity" || f === "all") {
+      setFilter(f);
+    }
+  }, []);
 
   const events = useMemo(() => {
     let list = state.events;
@@ -73,9 +82,11 @@ export default function AuditPage() {
         {FILTERS.map((f) => (
           <button
             key={f.id}
+            type="button"
+            aria-pressed={filter === f.id}
             onClick={() => setFilter(f.id)}
             className={cn(
-              "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition",
+              "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition active:scale-95",
               filter === f.id
                 ? "bg-gradient-to-r from-cyan-400 to-violet-500 text-ink-950 shadow"
                 : "border border-white/10 bg-white/[0.04] text-slate-400 hover:text-white"
@@ -87,9 +98,19 @@ export default function AuditPage() {
       </div>
 
       {state.events.length === 0 ? (
-        <div className="card flex items-center justify-center gap-3 p-8 text-center">
+        <div className="card flex flex-col items-center gap-3 p-8 text-center">
           <ShieldCheck className="h-8 w-8 text-slate-700" />
           <p className="text-sm muted">Nothing logged yet. Run the demo to fill the trail.</p>
+          <button
+            type="button"
+            onClick={() => {
+              if (state.mode !== "demo") setMode("demo");
+              window.setTimeout(() => runDemo(), 80);
+            }}
+            className="btn btn-primary mt-1"
+          >
+            <Play className="h-4 w-4 fill-current" /> Run the demo &amp; log decisions
+          </button>
         </div>
       ) : (
         <div className="card card-pad">

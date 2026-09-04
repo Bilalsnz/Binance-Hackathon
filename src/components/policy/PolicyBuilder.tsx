@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import type { Policy } from "@/lib/engine/types";
 import { DEFAULT_POLICY } from "@/lib/engine/defaults";
-import { formatUsd } from "@/lib/engine/policy";
+import { formatUsd, ruleLabelOf } from "@/lib/engine/policy";
+import { previewScenario, SCENARIOS } from "@/lib/demo/scenarios";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
 import { Btn, Card, cn, Switch, ToneBadge } from "@/components/ui";
 
@@ -253,6 +254,48 @@ export function PolicyBuilder() {
             </span>
           }
         />
+      </Card>
+
+      {/* How the draft would rule each scenario — live, recomputed on every edit */}
+      <Card className="card-pad">
+        <div className="row justify-between">
+          <p className="label">Guard&apos;s verdict on each scenario</p>
+          <ToneBadge tone={post.tone}>draft · {post.label}</ToneBadge>
+        </div>
+        <p className="mt-1 text-xs muted">
+          Re-runs the five demo proposals through your draft above — change a slider and watch the
+          verdicts move. Not enforced until you press Save.
+        </p>
+        <ul className="mt-3 grid divide-y divide-white/[0.05]">
+          {SCENARIOS.map((sc) => {
+            const pv = previewScenario(draft, exposureUsd, sc);
+            return (
+              <li key={sc.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold text-white">{sc.title}</p>
+                  <p
+                    className={cn(
+                      "mt-0.5 text-[11px] leading-snug",
+                      pv.ok ? "text-emerald-300/80" : "text-rose-300/90"
+                    )}
+                  >
+                    {pv.ok
+                      ? pv.needsApproval
+                        ? "Approves — pauses for your OK."
+                        : "Approves automatically."
+                      : `${ruleLabelOf(pv.rule!)} — ${pv.reason}`}
+                  </p>
+                </div>
+                <ToneBadge
+                  tone={pv.ok ? (pv.needsApproval ? "pending" : "ok") : "critical"}
+                  className="shrink-0"
+                >
+                  {pv.ok ? (pv.needsApproval ? "Needs your OK" : "Approved") : "Blocked"}
+                </ToneBadge>
+              </li>
+            );
+          })}
+        </ul>
       </Card>
 
       {/* Summary + save */}

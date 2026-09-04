@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowRight, Play, Sparkles } from "lucide-react";
+import { ArrowRight, Play, RotateCcw, SlidersHorizontal, Sparkles } from "lucide-react";
 import { EventFeed } from "@/components/feed/EventFeed";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
 import { AGENT_NAME, DEMO_SCRIPT } from "@/lib/demo/script";
@@ -11,8 +11,8 @@ import { agentStatusMeta, Btn, ToneBadge } from "@/components/ui";
 const PIPELINE = ["Research", "Propose", "Policy check", "Approve", "Execute"];
 
 export default function AgentPage() {
-  const { state, runDemo, pending } = useAgentGuard();
-  const live = state.status === "researching" || state.status === "proposing" || state.status === "running";
+  const { state, runDemo, resume, pending, setMode } = useAgentGuard();
+  const live = ["researching", "proposing", "running"].includes(state.status);
   const meta = agentStatusMeta(state.status);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -22,6 +22,20 @@ export default function AgentPage() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [asc.length, live]);
+
+  const idleWithFeed = state.status === "idle" && state.events.length > 0;
+  const canResume = idleWithFeed && state.scripted && !state.scriptDone && state.scriptIndex > 0;
+
+  // The judge flow is a Demo-Mode act; never silently run it from Live view.
+  const runInDemo = (fn: () => void) => () => {
+    if (state.mode !== "demo") {
+      setMode("demo");
+      window.setTimeout(() => fn(), 80);
+    } else {
+      fn();
+    }
+  };
+  const startFresh = runInDemo(runDemo);
 
   return (
     <div className="grid gap-4">
@@ -36,15 +50,37 @@ export default function AgentPage() {
       {pending.length > 0 ? (
         <Link
           href="/app/approvals"
-          className="row justify-between rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-200"
+          className="pressable row justify-between rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-200"
         >
           {pending.length} decision{pending.length > 1 ? "s" : ""} waiting on you <ArrowRight className="h-4 w-4" />
         </Link>
       ) : null}
 
-      {/* Pipeline strip */}
+      {/* Contextual next step when the feed exists but nothing is running */}
+      {idleWithFeed && !pending.length ? (
+        <div className="card card-pad row flex-wrap justify-between gap-2">
+          <p className="min-w-0 flex-1 text-xs muted">
+            {state.scriptDone
+              ? "Run complete — every proposal above was checked by the real policy engine."
+              : canResume
+                ? "The demo paused here. Resume to keep marching through the script."
+                : "That was a single scenario. Replay the full demo to watch all five proposals."}
+          </p>
+          <div className="row flex-wrap gap-2">
+            <Btn variant="ghost" onClick={canResume ? runInDemo(resume) : startFresh}>
+              <RotateCcw className="h-3.5 w-3.5" /> {state.scriptDone ? "Replay demo" : canResume ? "Resume demo" : "Full demo"}
+            </Btn>
+            <Link href="/app/policy" className="btn btn-ghost !px-3 !py-2 text-xs">
+              <SlidersHorizontal className="h-3.5 w-3.5" /> Tune policy
+            </Link>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Pipeline strip — a read-only live indicator, never a control */}
       <div className="card card-pad">
-        <div className="flex items-center justify-between gap-2">
+        <p className="label">Agent pipeline · status only</p>
+        <div className="mt-2 flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
             {(() => {
               const phase =
@@ -95,7 +131,10 @@ export default function AgentPage() {
               — approvals, blocks and all.
             </p>
           </div>
-          <Btn onClick={runDemo} className="mt-1">
+          {state.mode === "live" ? (
+            <p className="text-[11px] text-amber-200/80">Switching to Demo Mode to run the judge flow.</p>
+          ) : null}
+          <Btn onClick={startFresh} className="mt-1">
             <Play className="h-4 w-4 fill-current" /> Start the demo agent
           </Btn>
         </div>
