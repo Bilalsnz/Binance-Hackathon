@@ -231,7 +231,7 @@ export default function Landing() {
               <FlaskConical className="h-7 w-7 text-ink-950" />
             </span>
             <h2 className="mx-auto mt-5 max-w-xl font-display text-3xl font-bold text-white">
-              Watch it approve one trade and block four others — in 60 seconds.
+              Send these five through the engine in 60 seconds.
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-sm text-slate-300">
               The demo needs no account, no API key and no money. Then rebuild the policy and watch
