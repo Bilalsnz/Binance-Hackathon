@@ -6,6 +6,7 @@ import { cn, ToneBadge, toneText } from "@/components/ui";
 import { clock } from "./time";
 import { intentLabel } from "@/lib/store/events";
 import {
+  Check,
   CheckCircle2,
   Info,
   Power,
@@ -15,9 +16,19 @@ import {
   ShieldCheck,
   ShieldQuestion,
   Sparkles,
+  X,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
+import { ruleLabelOf } from "@/lib/engine/policy";
+import { toolCallLine } from "@/components/decision/ToolGate";
+
+/** Compact badge for the would-be Agent OS tool call on each audit decision. */
+const GATE_BADGE = {
+  deny: { label: "DENY", cls: "bg-rose-500/15 text-rose-300" },
+  hold: { label: "HOLD", cls: "bg-amber-400/15 text-amber-300" },
+  exec: { label: "EXEC · demo", cls: "bg-emerald-400/15 text-emerald-300" },
+} as const;
 
 const EVENT_ICON: Partial<Record<AuditEvent["event"], LucideIcon>> = {
   research: Search,
@@ -115,6 +126,19 @@ function AuditDecision({
     event.verdict === "approved" && event.requiresApproval && event.approvalState === "awaiting";
   const declined = event.verdict === "approved" && event.approvalState === "rejected";
 
+  // Which way the tool-call gateway swung for this decision (never executed by
+  // this row — the demo fill is the only thing that ever sets sentToBroker).
+  const gate: "deny" | "hold" | "exec" = blocked
+    ? "deny"
+    : awaiting
+      ? "hold"
+      : declined
+        ? "deny"
+        : event.sentToBroker === true
+          ? "exec"
+          : "hold";
+  const g = GATE_BADGE[gate];
+
   const chip: { label: string; tone: Tone } = blocked
     ? { label: "Blocked", tone: "critical" }
     : awaiting
@@ -204,6 +228,44 @@ function AuditDecision({
                   ? "never reached a broker"
                   : "not sent yet"}
             </span>
+          </div>
+        ) : null}
+
+        {event.checks && event.checks.length > 0 ? (
+          <div className="mt-2 overflow-hidden rounded-lg border border-white/[0.07]">
+            <div className="flex items-center justify-between gap-2 bg-white/[0.02] px-2.5 py-1.5">
+              <span className="mono min-w-0 truncate text-[11px] text-slate-300">
+                <span className="text-slate-500">guard → </span>
+                {toolCallLine(action)}
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wide",
+                  g.cls
+                )}
+              >
+                {g.label}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/[0.05] px-2.5 py-1.5">
+              {event.checks.map((c, i) => (
+                <span
+                  key={`${event.id}-rule-${i}`}
+                  title={c.detail}
+                  className={cn(
+                    "row items-center gap-1 text-[10px] font-medium",
+                    c.passed ? "text-emerald-300/70" : "text-rose-300"
+                  )}
+                >
+                  {c.passed ? (
+                    <Check className="h-3 w-3 shrink-0" strokeWidth={3} />
+                  ) : (
+                    <X className="h-3 w-3 shrink-0" strokeWidth={3} />
+                  )}
+                  {ruleLabelOf(c.rule)}
+                </span>
+              ))}
+            </div>
           </div>
         ) : null}
       </div>

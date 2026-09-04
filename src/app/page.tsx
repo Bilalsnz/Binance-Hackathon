@@ -28,11 +28,11 @@ const STEPS = [
 ];
 
 const SHOWCASE = [
-  { ok: true, wait: true, label: "Buy $100 BTC · spot", note: "within every limit" },
-  { ok: false, label: "Buy $250 BTC · spot", note: "exceeds $150 position cap" },
-  { ok: false, label: "Buy $80 SOL · spot", note: "SOL not on the allowlist" },
-  { ok: false, label: "LONG BTC · futures", note: "derivatives disabled" },
-  { ok: false, label: "Withdraw $40", note: "withdrawals disabled" },
+  { sym: "BTC", line: "Buy $100 BTC · spot" },
+  { sym: "BTC", line: "Buy $250 BTC · spot" },
+  { sym: "SOL", line: "Buy $80 SOL · spot" },
+  { sym: "BTC", line: "Long BTC · futures" },
+  { sym: "USDT", line: "Withdraw $40 USDT" },
 ];
 
 const FEATURES = [
@@ -44,28 +44,19 @@ const FEATURES = [
   { icon: Sparkles, t: "Built for the demo", d: "A full judge run in 60 seconds with zero signup, zero deposit, zero real orders." },
 ];
 
-function SampleVerdict({ ok, wait = false, label, note }: { ok: boolean; wait?: boolean; label: string; note: string }) {
+/**
+ * A neutral showcase row on the landing hero. Like the app's scenario chips,
+ * it deliberately does NOT preview a verdict — the action name is all that is
+ * shown, so nothing on this page can read as a scripted answer before the
+ * demo actually runs the proposal through the engine.
+ */
+function ShowcaseRow({ sym, line }: { sym: string; line: string }) {
   return (
-    <div
-      className={
-        ok
-          ? "rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] p-3"
-          : "rounded-xl border border-rose-400/20 bg-rose-500/[0.06] p-3"
-      }
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[13px] font-semibold text-slate-100">{label}</span>
-        {ok ? (
-          wait ? (
-            <span className="chip chip-pending shrink-0">approved · needs your OK</span>
-          ) : (
-            <span className="chip chip-ok shrink-0">approved</span>
-          )
-        ) : (
-          <span className="chip chip-critical shrink-0">blocked</span>
-        )}
-      </div>
-      <p className={`mt-0.5 text-[11px] ${ok ? "text-emerald-200/70" : "text-rose-200/70"}`}>{note}</p>
+    <div className="row items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/[0.06] font-display text-[11px] font-bold text-slate-200 ring-1 ring-white/10">
+        {sym.slice(0, 4)}
+      </span>
+      <span className="mono min-w-0 flex-1 truncate text-[13px] font-semibold text-slate-200">{line}</span>
     </div>
   );
 }
@@ -125,7 +116,7 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Live verdict showcase */}
+          {/* Live proposal showcase — actions only, no verdict preview */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm">
             <div className="row justify-between px-1 pb-3">
               <span className="row gap-1.5 text-xs font-semibold text-slate-200">
@@ -135,12 +126,12 @@ export default function Landing() {
             </div>
             <div className="grid gap-2">
               {SHOWCASE.map((s) => (
-                <SampleVerdict key={s.label} ok={s.ok} wait={s.wait} label={s.label} note={s.note} />
+                <ShowcaseRow key={s.line} sym={s.sym} line={s.line} />
               ))}
             </div>
             <p className="mt-3 px-1 text-[11px] leading-relaxed text-slate-500">
-              The same policy blocks a big BTC order, an unlisted asset, a leveraged futures long and
-              a withdrawal — while letting the in-limit BTC trade through for your approval.
+              Verdicts aren&apos;t printed on these cards — run the demo and the engine answers each
+              proposal live from this exact mandate. No scripted answers.
             </p>
           </div>
         </div>

@@ -4,6 +4,50 @@ import Link from "next/link";
 import { ArrowRight, History, ShieldCheck } from "lucide-react";
 import { DecisionCard } from "@/components/decision/DecisionCard";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
+import { formatUsd } from "@/lib/engine/policy";
+
+/**
+ * Live guard position. Exposure and buying power are derived from the executed
+ * events in the book, so every Approve (which appends a demo fill) raises
+ * exposure and lowers buying power on the spot; a Decline adds nothing. This is
+ * the mandate math, recomputed in real time — not a static display.
+ */
+function PositionBand() {
+  const { state, exposureUsd } = useAgentGuard();
+  const p = state.policy;
+  const buyPower = Math.max(0, p.maxCapitalUsd - exposureUsd);
+
+  const stats: Array<{ label: string; value: string; bad?: boolean }> = [
+    { label: "Exposure", value: formatUsd(exposureUsd), bad: exposureUsd > p.maxCapitalUsd },
+    { label: "Buying power left", value: formatUsd(buyPower), bad: buyPower <= 0 },
+    { label: "Capital ceiling", value: formatUsd(p.maxCapitalUsd) },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="label !mb-0">Guard position</p>
+        <span className="text-[10px] uppercase tracking-widest text-slate-500">
+          recomputed after every approve / decline
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-xl bg-ink-950/50 px-3 py-2">
+            <div className={`font-display text-base font-bold ${s.bad ? "text-rose-300" : "text-white"}`}>
+              {s.value}
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-slate-500">{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+        Approving a buy appends the demo fill to the book — exposure rises, buying power falls, and
+        the next proposal is judged against the updated position. Declining adds nothing.
+      </p>
+    </div>
+  );
+}
 
 export default function ApprovalsPage() {
   const { state, pending, runDemo, setMode } = useAgentGuard();
@@ -42,6 +86,8 @@ export default function ApprovalsPage() {
           Every approved action stops here first. You are the guard — nothing moves without you.
         </p>
       </header>
+
+      <PositionBand />
 
       {pending.length === 0 ? (
         <div className="card flex flex-col items-center gap-3 p-8 text-center">
