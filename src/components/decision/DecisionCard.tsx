@@ -6,6 +6,7 @@ import { ruleLabelOf } from "@/lib/engine/policy";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
 import { Btn, cn, ToneBadge } from "@/components/ui";
 import { approveLabel, describeAction, intentLabel } from "@/lib/store/events";
+import { ToolGate, toolCallLine } from "./ToolGate";
 
 function CheckRow({ c }: { c: PolicyCheck }) {
   return (
@@ -99,6 +100,31 @@ export function DecisionCard({ event, embed = false }: { event: AuditEvent; embe
         <p className="mt-3 border-l-2 border-white/10 pl-3 text-[13px] italic leading-relaxed text-slate-400">
           “{action.reason}”
         </p>
+
+        {/* Tool-call gateway — the would-be call and the guard's answer */}
+        {blocked ? (
+          <ToolGate
+            state="deny"
+            call={toolCallLine(action)}
+            note={`Refused under mandate v${event.policyVersion ?? "?"} before anything was sent — ${
+              event.checks?.find((c) => !c.passed)
+                ? `${ruleLabelOf(event.checks.find((c) => !c.passed)!.rule)}: ${event.checks.find((c) => !c.passed)!.detail}`
+                : "no broker or exchange ever received this call"
+            }`}
+          />
+        ) : awaiting ? (
+          <ToolGate
+            state="hold"
+            call={toolCallLine(action)}
+            note="Passes every rule — holding for your approval. Nothing has been sent to any broker or exchange."
+          />
+        ) : event.sentToBroker === true ? (
+          <ToolGate
+            state="exec"
+            call={toolCallLine(action)}
+            note="Guard approved → demo broker executed a SIMULATED fill. No real money moved."
+          />
+        ) : null}
 
         {/* Checks */}
         {event.checks && event.checks.length > 0 ? (

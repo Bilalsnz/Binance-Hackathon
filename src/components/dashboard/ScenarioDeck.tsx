@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Ban, ShieldCheck, ShieldQuestion, Sparkles } from "lucide-react";
-import type { ReactNode } from "react";
-import { ruleLabelOf } from "@/lib/engine/policy";
-import { previewScenario, SCENARIOS, scenarioAction, type Scenario, type ScenarioPreview } from "@/lib/demo/scenarios";
+import { ArrowUpRight, Sparkles } from "lucide-react";
+import { SCENARIOS, scenarioAction, type Scenario } from "@/lib/demo/scenarios";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
 import { cn, SectionTitle, Spinner } from "@/components/ui";
 
@@ -13,22 +11,18 @@ import { cn, SectionTitle, Spinner } from "@/components/ui";
  * The dashboard's "Try a scenario" deck. Each card runs ONE proposal through
  * the real policy engine the moment it is tapped, then routes the judge to the
  * right place: an approval that needs their OK → Approvals; anything else → the
- * decision feed on the Agent page. Cards are disabled (with the reason shown,
- * never silently) while a run is in flight or the mode/status forbids it.
+ * decision feed on the Agent page.
+ *
+ * Cards deliberately do NOT reveal a verdict before they run — no preview
+ * coloring, no "would be blocked" caption. The verdict appears only in the
+ * Decision Card after the engine evaluates it, so nothing on the dashboard can
+ * read as a scripted answer. Cards are disabled (with the reason shown, never
+ * silently) while a run is in flight or the mode/status forbids it.
  */
 export function ScenarioDeck() {
   const router = useRouter();
-  const { state, book, propose } = useAgentGuard();
+  const { state, propose } = useAgentGuard();
   const [busy, setBusy] = useState<string | null>(null);
-
-  // Live preview of what today's policy would say — recomputed on every edit.
-  const previews = useMemo(() => {
-    const map = new Map<string, ScenarioPreview>();
-    for (const sc of SCENARIOS) {
-      map.set(sc.id, previewScenario(state.policy, book, sc));
-    }
-    return map;
-  }, [state.policy, book]);
 
   const running = ["running", "researching", "proposing"].includes(state.status);
   const lock =
@@ -59,7 +53,7 @@ export function ScenarioDeck() {
 
   return (
     <section>
-      <SectionTitle icon={<Sparkles className="h-4 w-4 text-violet-300" />} hint="real engine · no preset verdicts">
+      <SectionTitle icon={<Sparkles className="h-4 w-4 text-violet-300" />} hint="verdict only after the run">
         Try a scenario
       </SectionTitle>
       {lock ? (
@@ -68,8 +62,8 @@ export function ScenarioDeck() {
         </p>
       ) : (
         <p className="mb-2 text-xs muted">
-          Tap one to watch the guard rule it right now — approved actions pause for your OK, blocked
-          ones show the exact reason.
+          Tap one to send it through the guard — the verdict is the engine&apos;s answer to the{" "}
+          <em>current</em> mandate, decided at that moment. No card here predicts it.
         </p>
       )}
 
@@ -78,7 +72,6 @@ export function ScenarioDeck() {
           <ScenarioCard
             key={sc.id}
             sc={sc}
-            preview={previews.get(sc.id)!}
             disabled={!!lock || busy !== null}
             busy={busy === sc.id}
             onTap={() => fire(sc)}
@@ -89,56 +82,24 @@ export function ScenarioDeck() {
   );
 }
 
-type Verdict = "ok" | "needs-ok" | "blocked";
-
-/** Single-source-of-truth styling per preview verdict — no nested ternaries. */
-const VERDICT_STYLE: Record<
-  Verdict,
-  { card: string; tile: string; sub: string; icon: ReactNode }
-> = {
-  blocked: {
-    card: "border-rose-400/20 bg-rose-500/[0.05] hover:border-rose-400/40 hover:bg-rose-500/[0.1]",
-    tile: "bg-rose-500/15 text-rose-300 ring-rose-400/25",
-    sub: "text-rose-300/90",
-    icon: <Ban className="h-5 w-5" />,
-  },
-  "needs-ok": {
-    card: "border-amber-400/25 bg-amber-400/[0.06] hover:border-amber-400/45 hover:bg-amber-400/[0.12]",
-    tile: "bg-amber-400/15 text-amber-300 ring-amber-400/25",
-    sub: "text-amber-200/90",
-    icon: <ShieldQuestion className="h-5 w-5" />,
-  },
-  ok: {
-    card: "border-emerald-400/20 bg-emerald-400/[0.05] hover:border-emerald-400/40 hover:bg-emerald-400/[0.1]",
-    tile: "bg-emerald-400/15 text-emerald-300 ring-emerald-400/25",
-    sub: "text-emerald-200/90",
-    icon: <ShieldCheck className="h-5 w-5" />,
-  },
-};
-
 function ScenarioCard({
   sc,
-  preview,
   disabled,
   busy,
   onTap,
 }: {
   sc: Scenario;
-  preview: ScenarioPreview;
   disabled: boolean;
   busy: boolean;
   onTap: () => void;
 }) {
   const action = scenarioAction(sc);
-  const verdict: Verdict = preview.ok ? (preview.needsApproval ? "needs-ok" : "ok") : "blocked";
-  const vs = VERDICT_STYLE[verdict];
-  const subtitle = busy
-    ? null
-    : preview.ok
-      ? preview.needsApproval
-        ? "Approves — pauses for your OK."
-        : "Approves automatically."
-      : `${preview.rule ? ruleLabelOf(preview.rule) + " — " : ""}${preview.reason ?? "blocked"}`;
+  const verb = action.side === "buy" ? "Buy" : "Sell";
+  const line = action.kind === "withdraw"
+    ? `Withdraw $${Math.round(action.notionalUsd).toLocaleString("en-US")}`
+    : `${verb} $${Math.round(action.notionalUsd).toLocaleString("en-US")} ${action.symbol}${
+        action.market === "futures" ? " · futures" : ""
+      }`;
 
   return (
     <button
@@ -147,17 +108,12 @@ function ScenarioCard({
       disabled={disabled}
       aria-busy={busy}
       className={cn(
-        "pressable group row w-full items-center gap-3 rounded-2xl border p-3 text-left",
-        vs.card,
+        "pressable group row w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-left transition",
+        "hover:border-cyan-400/40 hover:bg-white/[0.06]",
         disabled && "cursor-not-allowed opacity-60 active:scale-100"
       )}
     >
-      <span
-        className={cn(
-          "grid h-11 w-11 shrink-0 place-items-center rounded-xl font-display text-sm font-bold ring-1",
-          vs.tile
-        )}
-      >
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/[0.06] font-display text-sm font-bold text-slate-200 ring-1 ring-white/10">
         {action.symbol.slice(0, 3)}
       </span>
 
@@ -170,22 +126,21 @@ function ScenarioCard({
             </span>
           ) : null}
         </span>
-        <span className={cn("mt-0.5 block text-xs leading-snug", vs.sub)}>
+        <span className="mt-0.5 block text-xs leading-snug text-slate-400">
           {busy ? (
             <span className="row gap-1.5">
               <Spinner className="h-3 w-3" /> Checking against your policy…
             </span>
           ) : (
-            subtitle
+            <span className="mono font-semibold text-slate-300">{line}</span>
           )}
         </span>
       </span>
 
       <span className="row shrink-0 items-center gap-1.5">
-        {busy ? null : vs.icon}
-        {!busy && !disabled ? (
-          <ArrowUpRight className="h-3.5 w-3.5 text-current opacity-0 transition group-hover:opacity-100" />
-        ) : null}
+        {busy ? null : (
+          <ArrowUpRight className="h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" />
+        )}
       </span>
     </button>
   );

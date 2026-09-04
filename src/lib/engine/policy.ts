@@ -122,25 +122,47 @@ export function evaluateAction(
     checks.push(check("allowed-assets", true, "Not an asset trade"));
   }
 
-  // 3 · Position size — single-order notional cap.
-  if (notional <= policy.maxPositionUsd) {
-    checks.push(
-      check(
-        "position-size",
-        true,
-        `${money(notional)} ≤ per-position cap ${money(policy.maxPositionUsd)}`
-      )
-    );
+  // 3 · Position size — cumulative per-asset position cap. A buy is refused
+  // when it would push what the agent already holds in that asset over the cap,
+  // so splitting a big intent into many small orders can never dodge it. On a
+  // book that reports no positions this degenerates to a plain per-order cap.
+  const heldInAsset =
+    action.kind === "trade" ? (ctx.positions?.[symbol] ?? 0) : 0;
+  if (action.kind === "trade" && action.side === "buy") {
+    const after = heldInAsset + notional;
+    if (after <= policy.maxPositionUsd) {
+      checks.push(
+        check(
+          "position-size",
+          true,
+          heldInAsset > 0
+            ? `${money(heldInAsset)} held + ${money(notional)} → ${money(
+                after
+              )} ${symbol} ≤ position cap ${money(policy.maxPositionUsd)}`
+            : `${money(notional)} ≤ position cap ${money(policy.maxPositionUsd)}`
+        )
+      );
+    } else {
+      checks.push(
+        check(
+          "position-size",
+          false,
+          heldInAsset > 0
+            ? `${symbol} would reach ${money(after)} (${money(
+                heldInAsset
+              )} held + ${money(notional)}) — over the ${money(
+                policy.maxPositionUsd
+              )} position cap; small orders add up`
+            : `${money(notional)} exceeds the ${money(
+                policy.maxPositionUsd
+              )} position cap`
+        )
+      );
+    }
+  } else if (action.kind === "trade" && action.side === "sell") {
+    checks.push(check("position-size", true, "Not a size increase (sell)"));
   } else {
-    checks.push(
-      check(
-        "position-size",
-        false,
-        `${money(notional)} exceeds the ${money(
-          policy.maxPositionUsd
-        )} position cap`
-      )
-    );
+    checks.push(check("position-size", true, "Not a market buy"));
   }
 
   // 4 · Risk per trade — the agent's own worst-case estimate must fit.

@@ -140,13 +140,13 @@ API keys, and never bypasses Binance auth, permissions, or regional restrictions
 
 ## Policy engine
 
-Located in `src/lib/engine/`. Pure TypeScript, no I/O, fully unit-tested (**59 tests / 5 suites**).
+Located in `src/lib/engine/`. Pure TypeScript, no I/O, fully unit-tested (**73 tests / 6 suites**).
 
 | Rule | What it enforces | Blocked example |
 |---|---|---|
 | `capital` | Running exposure (executed buys) never exceeds the mandate ceiling | Buying when exposure would exceed `maxCapitalUsd` |
 | `allowed-assets` | Only allowlisted base assets may be traded | `SOL` when allowlist is `BTC, ETH` |
-| `position-size` | Single-order notional ≤ per-position cap | `$250 BTC` when cap is `$150` |
+| `position-size` | Cumulative per-asset position: what you already hold **plus** this buy stays under the cap — many small buys add up and can't dodge it | 4th drip of `$40` BTC when `$120` is held → `$160 > $150` |
 | `risk-per-trade` | Agent's own worst-case loss estimate ≤ the loss cap | `estRiskUsd $90` when cap is `$20` |
 | `market` | Spot always; futures only if `allowFutures` | Any `futures` action when disabled |
 | `withdrawals` | Outbound transfers only if `allowWithdrawals` | Any withdrawal when disabled |
@@ -183,6 +183,24 @@ Run the checks:
 ```bash
 npm test
 ```
+
+### Hostile demo & the tool-call gateway
+
+The Proposal Lab (Home) has two attack surfaces, both judged by the same deterministic engine:
+
+- **Single-order probes** — "ignore the mandate", "ignore the allowlist (SOL)", leveraged futures,
+  withdrawal, splitting evasion. Each renders the exact rule ids that fired plus the raw normalized
+  payload.
+- **Stacking replay** — a hostile agent drip-feeds small same-asset orders to sneak past the
+  position cap. `planStack` replays the drip through `evaluateAction` from the real executed book
+  and stops at the first refusal, so the demo proves that many small buys cannot exceed the
+  cumulative per-asset cap (covered by dedicated unit tests in `v2.test.ts` and `stacking.test.ts`).
+
+Every decision is shown through the **tool-call gateway**: the would-be call AgentGuard sits in
+front of, answered `DENY` (nothing sent), `HOLD` (needs your approval) or `EXEC · demo` (simulated
+demo-broker fill). The gateway never claims a real MCP tool name — the normalized payload is the
+evidence. Scenario cards deliberately reveal no verdict before you tap them, so nothing on the
+dashboard can read as a scripted answer.
 
 ---
 

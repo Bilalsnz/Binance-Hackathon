@@ -90,7 +90,9 @@ describe("v2 aggregate rules", () => {
 
   it("passes concentration when the summed position fits the cap", () => {
     const d = evaluateAction(
-      makePolicy({ maxSingleAssetUsd: 400 }),
+      // Isolate the concentration rule: raise the per-order/position cap so the
+      // summed position only has to answer to maxSingleAssetUsd.
+      makePolicy({ maxSingleAssetUsd: 400, maxPositionUsd: 500 }),
       action({ notionalUsd: 40 }),
       ctx({ exposureUsd: 350, positions: { BTC: 350 } }),
       NOW
@@ -279,5 +281,79 @@ describe("policy versioning & normalization", () => {
     ] as const) {
       assert.ok(ruleLabelOf(rule).length > 0, rule);
     }
+  });
+});
+
+describe("stacking vs the position cap", () => {
+  it("refuses a buy that would push the same asset's cumulative position over the cap", () => {
+    // One $120 order when $100 BTC is already held → 220 > 150.
+    const d = evaluateAction(
+      makePolicy({ maxPositionUsd: 150 }),
+      action({ notionalUsd: 120 }),
+      ctx({ exposureUsd: 100, positions: { BTC: 100 } }),
+      NOW
+    );
+    failing("position-size", d);
+    assert.match(
+      d.blockedBy[0].detail,
+      /add up|held \+ /,
+      "detail explains that small orders accumulate"
+    );
+  });
+
+  it("many small same-asset buys cannot exceed the position cap", () => {
+    // Simulate a drip: each $40 order is fine on its own, so we advance the
+    // book (as approvals/executions would) and let the NEXT order be judged.
+    const policy = makePolicy({ maxPositionUsd: 150 });
+    let book: GuardContext = { exposureUsd: 0, positions: {}, ordersToday: 0, dailyNotionalUsd: 0 };
+    let approved = 0;
+    let blocked = 0;
+    for (let i = 0; i < 10; i++) {
+      const d = evaluateAction(
+        policy,
+        action({ notionalUsd: 40 }),
+        { ...book },
+        NOW
+      );
+      if (d.state === "blocked") {
+        blocked++;
+        // The drip is stopped by the position cap, not the aggregate caps.
+        assert.ok(d.blockedBy.some((c) => c.rule === "position-size"), d.blockedBy.map((c) => c.rule).join(","));
+        break;
+      }
+      approved++;
+      book.exposureUsd = (book.exposureUsd ?? 0) + 40;
+      book.positions!.BTC = (book.positions?.BTC ?? 0) + 40;
+      book.ordersToday = (book.ordersToday ?? 0) + 1;
+      book.dailyNotionalUsd = (book.dailyNotionalUsd ?? 0) + 40;
+    }
+    // 3 × $40 = $120 allowed → 4th takes it to $160 > $150 and is refused.
+    assert.equal(approved, 3);
+    assert.equal(blocked, 1);
+  });
+
+  it("a sell of the same asset stays allowed even while holding near the cap", () => {
+    const d = evaluateAction(
+      makePolicy({ maxPositionUsd: 150 }),
+      action({ side: "sell", notionalUsd: 60 }),
+      ctx({ exposureUsd: 140, positions: { BTC: 140 } }),
+      NOW
+    );
+    assert.equal(d.state, "approved");
+  });
+
+  it("single big order is still caught from an empty book (same cap)", () => {
+    const d = evaluateAction(makePolicy({ maxPositionUsd: 150 }), action({ notionalUsd: 250 }), ctx(), NOW);
+    failing("position-size", d);
+  });
+
+  it("existing exposure in OTHER assets does not count against this asset's cap", () => {
+    const d = evaluateAction(
+      makePolicy({ maxPositionUsd: 150 }),
+      action({ symbol: "ETH", notionalUsd: 140 }),
+      ctx({ exposureUsd: 350, positions: { BTC: 300, ETH: 10 } }),
+      NOW
+    );
+    assert.equal(d.state, "approved");
   });
 });
