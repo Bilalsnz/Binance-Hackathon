@@ -7,6 +7,7 @@ import {
   ChevronRight,
   CircleCheck,
   FlaskConical,
+  Github,
   History,
   Lock,
   OctagonX,
@@ -79,6 +80,16 @@ export default function Landing() {
         <div className="row gap-2">
           <a href="#how" className="hidden text-sm font-medium text-slate-300 hover:text-white sm:block">
             How it works
+          </a>
+          <a
+            href="https://github.com/Bilalsnz/Binance-Hackathon"
+            target="_blank"
+            rel="noreferrer"
+            title="AgentGuard source on GitHub"
+            aria-label="AgentGuard source on GitHub"
+            className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-cyan-400/40 hover:bg-white/[0.08] hover:text-white"
+          >
+            <Github className="h-[18px] w-[18px]" />
           </a>
           <Link href="/app" className="btn btn-primary !py-2">
             Open app <ChevronRight className="h-4 w-4" />

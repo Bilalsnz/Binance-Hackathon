@@ -42,13 +42,17 @@ USER GOAL → AGENT RESEARCH → PROPOSED ACTION → POLICY CHECK → APPROVED /
 Change the policy and replay — the *same* agent behaves differently, because the engine is real logic.
 (The demo pauses twice on purpose: approving an action is the point of the product.)
 
+> 🎬 **Recording the demo?** Follow [`DEMO_RECORDING.md`](DEMO_RECORDING.md) — a timed, narrated
+> 60-second shot list for **compose → gate → approve/block → mandate edit → stacking**, with the exact
+> on-screen states to capture.
+
 ---
 
 ## Screens
 
 | Screen | Route | What you see |
 |---|---|---|
-| Landing | `/` | Value proposition, live verdict showcase, workflow, Agent OS alignment |
+| Landing | `/` | Value proposition, live proposal showcase, workflow, Agent OS alignment |
 | Home (dashboard) | `/app` | Agent status + run controls, mandate summary, exchange connection, recent decisions |
 | Agent activity | `/app/agent` | Live research → proposal → decision feed with policy checks |
 | Approvals | `/app/approvals` | Every action that needs your sign-off, with Approve / Decline |
