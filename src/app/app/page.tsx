@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { AgentPanel } from "@/components/dashboard/AgentPanel";
+import { ProposalLab } from "@/components/dashboard/ProposalLab";
 import { ScenarioDeck } from "@/components/dashboard/ScenarioDeck";
 import { PolicySummary } from "@/components/dashboard/PolicySummary";
 import { ConnectionCard } from "@/components/dashboard/ConnectionCard";
@@ -42,6 +43,7 @@ export default function DashboardPage() {
       ) : null}
 
       <AgentPanel />
+      <ProposalLab />
       <ScenarioDeck />
       <PolicySummary />
       <ConnectionCard />

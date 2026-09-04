@@ -52,7 +52,7 @@ describe("AgentGuard policy engine", () => {
     approved(d);
     assert.equal(d.requiresApproval, true);
     assert.equal(d.exposureAfterUsd, 100);
-    assert.equal(d.checks.length, 6, "every rule is checked and reported");
+    assert.equal(d.checks.length, 10, "every rule (6 core + 4 v2) is checked and reported");
   });
 
   it("blocks an oversized BTC buy (position limit exceeded)", () => {

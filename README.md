@@ -140,7 +140,7 @@ API keys, and never bypasses Binance auth, permissions, or regional restrictions
 
 ## Policy engine
 
-Located in `src/lib/engine/`. Pure TypeScript, no I/O, fully unit-tested (14 tests).
+Located in `src/lib/engine/`. Pure TypeScript, no I/O, fully unit-tested (**59 tests / 5 suites**).
 
 | Rule | What it enforces | Blocked example |
 |---|---|---|
@@ -150,6 +150,10 @@ Located in `src/lib/engine/`. Pure TypeScript, no I/O, fully unit-tested (14 tes
 | `risk-per-trade` | Agent's own worst-case loss estimate ≤ the loss cap | `estRiskUsd $90` when cap is `$20` |
 | `market` | Spot always; futures only if `allowFutures` | Any `futures` action when disabled |
 | `withdrawals` | Outbound transfers only if `allowWithdrawals` | Any withdrawal when disabled |
+| `daily-loss` | Realized losses today never pass the daily-loss stop | Selling a holding at a loss that crosses the daily stop |
+| `concentration` | No single asset's exposure exceeds the cap share of capital | One coin > 60% of the mandate's capital |
+| `order-rate` | Aggregate orders/day stay under the cap | A 3rd action in the same demo session |
+| `daily-notional` | Sum of the session's entry notional stays under the cap | Cumulatively buying past `$600`/day |
 
 Key contract — all four shapes are plain JSON and survive the whole pipeline:
 
@@ -157,9 +161,22 @@ Key contract — all four shapes are plain JSON and survive the whole pipeline:
 Policy × ProposedAction → PolicyCheck[] → Decision { state, checks, blockedBy, requiresApproval } → AuditEvent[]
 ```
 
-**`evaluateAction(policy, action, currentExposureUsd)` is a pure function.** The same code runs on the
+**`evaluateAction(policy, action, ctx)` is a pure function.** The same code runs on the
 client, on the server and in the unit tests — the demo verdicts are the real engine, not a scripted
-look-alike. Change the policy and the demo's decisions change with it.
+look-alike. Change the policy and the demo's decisions change with it. `ctx` (the "book") is derived
+from executed events (`computeBook`) and includes current exposure, per-asset positions, today's
+orders and daily notional, so the aggregate rules above are enforced in the running app — not just
+documented.
+
+The versioned mandate is part of the proof: every policy save bumps a version, keeps the full
+history with a field-level diff, and stamps the version onto each decision. Editing the mandate and
+re-running the **exact same** action (Policy screen → “Save & re-run the action”) shows a verdict
+flip that comes from the rules, not from a script.
+
+An HTTP seam (`POST /api/guard/evaluate`) exposes the same engine as a pure allow/refuse JSON
+response — the honest interception point for a desktop Agent OS agent to gate its Binance MCP tool
+call. It never holds keys, never connects to Binance and never executes. Boundary is documented in
+`ARCHITECTURE.md` as exactly as strong as the calling code path.
 
 Run the checks:
 
@@ -182,6 +199,21 @@ No secret keys exist in this project. See `.env.example`.
 
 ---
 
+## Evidence & receipts
+
+Every decision row records its original intent, the normalized tool-call payload, the mandate
+version it ran under, every rule check, the verdict, the exact reason, approval state, execution
+state and timestamp — plus whether the action was **sent to** or **prevented from reaching** a
+broker. Blocked and approval-pending actions carry `sentToBroker: false`; a demo fill is the only
+thing that ever sets it true.
+
+The Audit page exports the whole session as a **tamper-evident JSON receipt** (SHA-256 hash chain
+over each event — any later edit, reorder or deletion is detectable by re-hashing). The receipt is
+honestly labelled: generated locally in the browser, not signed or notarised, and no immutability
+is claimed.
+
+---
+
 ## Security posture
 
 - **No secrets in frontend code.** No API keys anywhere; nothing is committed under `.env*`.
@@ -200,12 +232,15 @@ No secret keys exist in this project. See `.env.example`.
 
 ```
 src/
-  app/                 # routes: / (landing) · /app/* (the product) · /api/market/snapshot
-  components/          # decision cards, feed, dashboard, policy builder, app shell
+  app/                 # routes: / (landing) · /app/* (product) · /api/guard/evaluate · /api/market/snapshot
+  components/          # decision cards, feed, dashboard (incl. ProposalLab), audit (receipts), policy builder
   lib/
-    engine/            # ★ policy engine: types.ts · policy.ts · engine.test.ts · defaults.ts
-    demo/              # scripted demo timeline + labelled quote fallbacks
-    store/             # React state machine, audit store, localStorage persistence
+    engine/            # ★ policy engine: types.ts · policy.ts · rules.ts (10 rules) · normalize.ts ·
+                       #   versioning.ts · engine.test.ts · v2.test.ts · defaults.ts
+    demo/              # scenario deck + hostile probes + labelled quote fallbacks
+    guard/             # HTTP request/response mapping for the allow/refuse API seam (+ tests)
+    store/             # React state machine, proposal API, book context, policy history, persistence
+    receipt.ts         # tamper-evident SHA-256 receipt chain (exported from the Audit page)
     market.ts          # live Binance public market snapshot (keyless) w/ fallback
 ```
 

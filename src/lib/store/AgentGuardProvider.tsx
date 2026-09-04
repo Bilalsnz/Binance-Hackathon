@@ -14,34 +14,86 @@ import {
 import {
   initialState,
   reducer,
-  computeExposure,
+  computeBook,
   pendingApprovals,
   type AppState,
+  type LastProposal,
   type Mode,
 } from "./state";
 import type {
   AuditEvent,
   Decision,
+  GuardContext,
+  IntentOrigin,
+  NormalizedCall,
   Policy,
   ProposedAction,
+  RuleId,
 } from "@/lib/engine/types";
 import { evaluateAction } from "@/lib/engine/policy";
+import { normalizeToolCall } from "@/lib/engine/normalize";
+import { nextPolicyRecord } from "@/lib/engine/versioning";
 import { AGENT_NAME, DEMO_SCRIPT, type DemoScriptStep } from "@/lib/demo/script";
-import { SCENARIOS } from "@/lib/demo/scenarios";
 import { quoteToUsd } from "@/lib/demo/quotes";
-import { isoNow, mkEvent, summarizeDecision, uid } from "./events";
+import { diffText, isoNow, mkEvent, summarizeDecision, uid } from "./events";
 import { loadPersisted, persistState } from "./storage";
 
-/** What happened after the user tapped a quick-launch scenario. */
-export type ScenarioOutcome =
-  | { verdict: "blocked"; reason?: string; rule?: string }
-  | { verdict: "needs-ok"; reason?: string }
-  | { verdict: "approved"; reason?: string };
+/**
+ * What happened after the guard ruled ONE proposed action. Carries the produced
+ * audit event's id + evidence so the caller can render the exact payload and
+ * rule ids without re-reading the feed.
+ */
+export type ProposalOutcome =
+  | {
+      verdict: "blocked";
+      reason?: string;
+      rule?: RuleId;
+      eventId: string;
+      policyVersion: number;
+      /** The refused action never reached a broker. */
+      sentToBroker: false;
+      blockedRules: RuleId[];
+      /** The normalized tool-call payload recorded as evidence. */
+      payload: NormalizedCall;
+    }
+  | {
+      verdict: "needs-ok";
+      reason?: string;
+      eventId: string;
+      policyVersion: number;
+      sentToBroker: false;
+      blockedRules: [];
+      payload: NormalizedCall;
+    }
+  | {
+      verdict: "approved";
+      reason?: string;
+      eventId: string;
+      policyVersion: number;
+      /** True when the demo broker received a simulated fill. */
+      sentToBroker: boolean;
+      blockedRules: [];
+      payload: NormalizedCall;
+    };
+
+/** Back-compat alias — older code called these "scenarios". */
+export type ScenarioOutcome = ProposalOutcome;
+
+/** Evidence stamped onto every decision row (see ARCHITECTURE.md §audit). */
+export interface GuardEvidence {
+  policyVersion: number;
+  payload: NormalizedCall;
+  intent: IntentOrigin;
+  prompt?: string;
+}
 
 interface AgentGuardApi {
   state: AppState;
   hydrated: boolean;
+  /** Running exposure (notional at entry), USD — shorthand for `book`. */
   exposureUsd: number;
+  /** The full broker book the engine consults for aggregate rules. */
+  book: GuardContext;
   pending: AuditEvent[];
   lastDecision: AuditEvent | null;
   runDemo: () => void;
@@ -52,8 +104,19 @@ interface AgentGuardApi {
   reject: (eventId: string) => void;
   setPolicy: (policy: Policy) => void;
   setMode: (mode: Mode) => void;
-  /** Run ONE quick-launch scenario through the real engine (Demo Mode only). */
-  playScenario: (scenarioId: string) => Promise<ScenarioOutcome | null>;
+  /**
+   * Run ONE proposed action through the real policy engine (Demo Mode only)
+   * and append a fully-evidenced decision to the audit trail. `intent` labels
+   * where the action came from; `prompt` carries the raw instruction (used for
+   * hostile-attack probes). Also records `lastProposal` so the SAME action can
+   * be re-run after a mandate edit — proving the next verdict changed.
+   */
+  propose: (
+    action: ProposedAction,
+    opts?: { intent?: IntentOrigin; prompt?: string }
+  ) => Promise<ProposalOutcome | null>;
+  /** Re-run the last single proposal against the CURRENT policy. */
+  rerunLastProposal: () => Promise<ProposalOutcome | null>;
 }
 
 const Ctx = createContext<AgentGuardApi | null>(null);
@@ -132,6 +195,22 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  /**
+   * Evidence attached to every row about one action: the mandate version it was
+   * evaluated under, the normalized tool-call payload, and its provenance. The
+   * version is read at STAMP time (stateRef), so rows never lie about which
+   * policy produced them — even when the mandate changes a tick later.
+   */
+  const guardEvidence = useCallback(
+    (action: ProposedAction, intent: IntentOrigin, prompt?: string): GuardEvidence => ({
+      policyVersion: stateRef.current.policy.version,
+      payload: normalizeToolCall(action),
+      intent,
+      prompt,
+    }),
+    []
+  );
+
   const actionFromStep = useCallback(
     (step: Extract<DemoScriptStep, { type: "action" }>): ProposedAction => ({
       id: uid(),
@@ -149,15 +228,21 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  /** Follow-on events that mark a decision as executed in the demo wallet. */
+  /**
+   * Follow-on events that mark an action as having reached the (simulated)
+   * broker. `sentToBroker: true` here means the demo exchange accepted it —
+   * never a real Binance fill.
+   */
   const executedFollowups = useCallback(
-    (action: ProposedAction): AuditEvent[] => [
+    (action: ProposedAction, ev: GuardEvidence): AuditEvent[] => [
       stampEvent({
         event: "executed",
         actor: "Demo broker",
         summary: `Demo fill — ${action.side} ${action.symbol} at market. Simulated.`,
         tone: "ok",
         action,
+        ...ev,
+        sentToBroker: true,
       }),
     ],
     [stampEvent]
@@ -222,14 +307,15 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Action step — run it through the real policy engine.
+    // Action step — run it through the real policy engine with the full book.
     dispatch({ type: "set-status", status: "proposing" });
     const action = actionFromStep(step);
     const s2 = stateRef.current;
+    const ev = guardEvidence(action, "scripted", action.goal);
     const decision: Decision = evaluateAction(
       s2.policy,
       action,
-      computeExposure(s2.events)
+      computeBook(s2.events)
     );
 
     if (decision.state === "blocked") {
@@ -245,6 +331,8 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
             checks: decision.checks,
             verdict: "blocked",
             reason: decision.blockedBy[0]?.detail,
+            ...ev,
+            sentToBroker: false,
           }),
         ],
       });
@@ -266,6 +354,8 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
             verdict: "approved",
             requiresApproval: true,
             approvalState: "awaiting",
+            ...ev,
+            sentToBroker: false,
           }),
         ],
       });
@@ -285,12 +375,14 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
           action,
           checks: decision.checks,
           verdict: "approved",
+          ...ev,
+          sentToBroker: true,
         }),
-        ...executedFollowups(action),
+        ...executedFollowups(action, ev),
       ],
     });
     schedule(() => advance(), 1500);
-  }, [actionFromStep, executedFollowups, finishRun, schedule, stampEvent]);
+  }, [actionFromStep, executedFollowups, finishRun, guardEvidence, schedule, stampEvent]);
 
   // ---- Public API ---------------------------------------------------------
 
@@ -305,6 +397,7 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
           actor: AGENT_NAME,
           summary: `${AGENT_NAME} came online and read your mandate. Pressing forward with research…`,
           tone: "info",
+          policyVersion: stateRef.current.policy.version,
         }),
       ],
     });
@@ -354,16 +447,18 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
       // nothing executes and the agent does not continue.
       const frozen = s.status === "stopped";
       // A full scripted demo marches on after the OK; a single quick-launch
-      // scenario settles back instead (so an approval can never silently start
+      // proposal settles back instead (so an approval can never silently start
       // the whole 60-second script from step zero).
       const wasScripted = s.scripted;
       const stillAwaiting = pendingApprovals(s.events).some((e) => e.id !== eventId);
+      // Evidence for the human decision — evaluated under the CURRENT mandate.
+      const ev = guardEvidence(action, base.intent ?? "user", base.prompt);
 
       // Re-check against the *current* policy in case it changed while waiting.
       const decision = evaluateAction(
         s.policy,
         action,
-        computeExposure(s.events)
+        computeBook(s.events)
       );
 
       if (decision.state === "blocked") {
@@ -381,6 +476,8 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
               checks: decision.checks,
               verdict: "blocked",
               reason: decision.blockedBy[0]?.detail,
+              ...ev,
+              sentToBroker: false,
             }),
           ],
         });
@@ -396,8 +493,10 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
               summary: `You approved the ${action.symbol} ${action.market} action.`,
               tone: "ok",
               action,
+              ...ev,
+              sentToBroker: !frozen,
             }),
-            ...(frozen ? [] : executedFollowups(action)),
+            ...(frozen ? [] : executedFollowups(action, ev)),
           ],
         });
       }
@@ -411,7 +510,7 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [advance, executedFollowups, schedule, stampEvent]
+    [advance, executedFollowups, guardEvidence, schedule, stampEvent]
   );
 
   const reject = useCallback(
@@ -423,6 +522,7 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
       const frozen = stateRef.current.status === "stopped";
       const wasScripted = s.scripted;
       const stillAwaiting = pendingApprovals(s.events).some((e) => e.id !== eventId);
+      const ev = guardEvidence(action, base.intent ?? "user", base.prompt);
       dispatch({
         type: "resolve-approval",
         eventId,
@@ -434,6 +534,8 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
             summary: `You declined the ${action.symbol} action — nothing was sent.`,
             tone: "warn",
             action,
+            ...ev,
+            sentToBroker: false,
           }),
         ],
       });
@@ -447,115 +549,162 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [advance, schedule, stampEvent]
+    [advance, guardEvidence, schedule, stampEvent]
   );
 
   /**
-   * Run a single quick-launch scenario through the real engine. Demo Mode only;
-   * the trail is preserved (scenarios append to it), the context switches to
-   * ad-hoc so nothing here can resume a scripted demo, and the human approval
-   * gate works exactly as it does mid-demo. Resolves with the verdict so the UI
-   * can navigate to the right place (approvals vs. the decision feed).
+   * Run ONE proposed action through the real policy engine (Demo Mode only).
+   * Covers quick-launch scenarios, the custom proposal composer and hostile
+   * probes alike — the engine cannot tell them apart, only the `intent` label
+   * on the audit row says where each came from. Also records `lastProposal`
+   * so the user can edit the mandate and re-run the identical action to prove
+   * the next verdict comes from the RULES, not a script.
    */
-  const playScenario = useCallback(
-    async (scenarioId: string): Promise<ScenarioOutcome | null> => {
+  const propose = useCallback(
+    async (
+      action: ProposedAction,
+      opts: { intent?: IntentOrigin; prompt?: string } = {}
+    ): Promise<ProposalOutcome | null> => {
+      const intent: IntentOrigin = opts.intent ?? "user";
       const s0 = stateRef.current;
       if (s0.mode !== "demo") return null; // Live view is reference-only.
-      const sc = SCENARIOS.find((x) => x.id === scenarioId);
-      if (!sc) return null;
       clearTimers();
-      const step = DEMO_SCRIPT[sc.index];
-      if (!step || step.type !== "action") return null;
-      const action = actionFromStep(step);
+      const last: LastProposal = { action, intent, prompt: opts.prompt };
+      dispatch({ type: "set-last-proposal", last });
       dispatch({ type: "set-script", scripted: false });
       dispatch({ type: "set-status", status: "proposing" });
 
-      return new Promise<ScenarioOutcome | null>((resolve) => {
+      return new Promise<ProposalOutcome | null>((resolve) => {
         schedule(() => {
           const s = stateRef.current;
-          const decision = evaluateAction(
-            s.policy,
-            action,
-            computeExposure(s.events)
-          );
-          const reason = decision.blockedBy[0]?.detail;
-          const rule = decision.blockedBy[0]?.rule;
+          const ev = guardEvidence(action, intent, opts.prompt);
+          const decision = evaluateAction(s.policy, action, computeBook(s.events));
+
           if (decision.state === "blocked") {
-            dispatch({
-              type: "append",
-              events: [
-                stampEvent({
-                  event: "policy-decision",
-                  actor: AGENT_NAME,
-                  summary: summarizeDecision(action, decision),
-                  tone: "critical",
-                  action,
-                  checks: decision.checks,
-                  verdict: "blocked",
-                  reason,
-                }),
-              ],
+            const row = stampEvent({
+              event: "policy-decision",
+              actor: AGENT_NAME,
+              summary: summarizeDecision(action, decision),
+              tone: "critical",
+              action,
+              checks: decision.checks,
+              verdict: "blocked",
+              reason: decision.blockedBy[0]?.detail,
+              ...ev,
+              sentToBroker: false,
             });
+            dispatch({ type: "append", events: [row] });
             dispatch({ type: "set-status", status: "idle" });
-            resolve({ verdict: "blocked", reason, rule });
-            return;
-          }
-          if (decision.requiresApproval) {
-            dispatch({
-              type: "append",
-              events: [
-                stampEvent({
-                  event: "policy-decision",
-                  actor: AGENT_NAME,
-                  summary: summarizeDecision(action, decision),
-                  tone: "pending",
-                  action,
-                  checks: decision.checks,
-                  verdict: "approved",
-                  requiresApproval: true,
-                  approvalState: "awaiting",
-                }),
-              ],
+            resolve({
+              verdict: "blocked",
+              reason: decision.blockedBy[0]?.detail,
+              rule: decision.blockedBy[0]?.rule,
+              eventId: row.id,
+              policyVersion: ev.policyVersion,
+              sentToBroker: false,
+              blockedRules: decision.blockedBy.map((c) => c.rule),
+              payload: ev.payload,
             });
-            dispatch({ type: "set-status", status: "awaiting-approval" });
-            resolve({ verdict: "needs-ok", reason: decision.blockedBy[0]?.detail });
             return;
           }
+
+          if (decision.requiresApproval) {
+            const row = stampEvent({
+              event: "policy-decision",
+              actor: AGENT_NAME,
+              summary: summarizeDecision(action, decision),
+              tone: "pending",
+              action,
+              checks: decision.checks,
+              verdict: "approved",
+              requiresApproval: true,
+              approvalState: "awaiting",
+              ...ev,
+              sentToBroker: false,
+            });
+            dispatch({ type: "append", events: [row] });
+            dispatch({ type: "set-status", status: "awaiting-approval" });
+            resolve({
+              verdict: "needs-ok",
+              reason: decision.blockedBy[0]?.detail,
+              eventId: row.id,
+              policyVersion: ev.policyVersion,
+              sentToBroker: false,
+              blockedRules: [],
+              payload: ev.payload,
+            });
+            return;
+          }
+
           // Approved with no human gate → execute the simulated fill.
+          const row = stampEvent({
+            event: "policy-decision",
+            actor: AGENT_NAME,
+            summary: summarizeDecision(action, decision),
+            tone: "ok",
+            action,
+            checks: decision.checks,
+            verdict: "approved",
+            ...ev,
+            sentToBroker: true,
+          });
           dispatch({
             type: "append",
-            events: [
-              stampEvent({
-                event: "policy-decision",
-                actor: AGENT_NAME,
-                summary: summarizeDecision(action, decision),
-                tone: "ok",
-                action,
-                checks: decision.checks,
-                verdict: "approved",
-              }),
-              ...executedFollowups(action),
-            ],
+            events: [row, ...executedFollowups(action, ev)],
           });
           dispatch({ type: "set-status", status: "idle" });
-          resolve({ verdict: "approved", reason: decision.blockedBy[0]?.detail });
-        }, 700);
+          resolve({
+            verdict: "approved",
+            reason: decision.blockedBy[0]?.detail,
+            eventId: row.id,
+            policyVersion: ev.policyVersion,
+            sentToBroker: true,
+            blockedRules: [],
+            payload: ev.payload,
+          });
+        }, 550);
       });
     },
-    [actionFromStep, clearTimers, executedFollowups, schedule, stampEvent]
+    [clearTimers, executedFollowups, guardEvidence, schedule, stampEvent]
   );
+
+  /** Re-run the last single proposal — the "edit mandate, same action" proof. */
+  const rerunLastProposal = useCallback(async (): Promise<ProposalOutcome | null> => {
+    const s = stateRef.current;
+    if (!s.lastProposal) return null;
+    const { action, intent, prompt } = s.lastProposal;
+    return propose(action, { intent, prompt });
+  }, [propose]);
 
   const setPolicy = useCallback(
     (policy: Policy) => {
-      dispatch({ type: "set-policy", policy });
+      const prev = stateRef.current.policy;
+      // Compute the next version record NOW (pure) so the feed row and the
+      // reducer's history entry always agree — even though stateRef only
+      // catches up on the next render.
+      const rec = nextPolicyRecord(prev, {
+        ...policy,
+        version: prev.version,
+        updatedAt: policy.updatedAt,
+      });
+      const changed = rec.diff.length > 0;
+      const version = changed ? rec.version : prev.version;
+      dispatch({
+        type: "set-policy",
+        policy: { ...policy, version, updatedAt: policy.updatedAt },
+      });
       dispatch({
         type: "append",
         events: [
           stampEvent({
             event: "policy-updated",
             actor: "You",
-            summary: `Mandate updated — “${policy.name}”. Every future action is checked against the new rules.`,
+            summary: changed
+              ? `Mandate updated to v${version} — “${policy.name}”. Every future action is checked against the new rules.`
+              : `Mandate saved — no rules actually changed (still v${version}).`,
             tone: "info",
+            detail: changed ? diffText(rec.diff) : undefined,
+            policyVersion: version,
           }),
         ],
       });
@@ -585,7 +734,8 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
     [stampEvent]
   );
 
-  const exposureUsd = useMemo(() => computeExposure(state.events), [state.events]);
+  const book = useMemo(() => computeBook(state.events), [state.events]);
+  const exposureUsd = book.exposureUsd;
   const pending = useMemo(() => pendingApprovals(state.events), [state.events]);
   const lastDecision = useMemo(() => {
     const reversed = [...state.events].reverse();
@@ -598,6 +748,7 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
     state,
     hydrated,
     exposureUsd,
+    book,
     pending,
     lastDecision,
     runDemo,
@@ -608,7 +759,8 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
     reject,
     setPolicy,
     setMode,
-    playScenario,
+    propose,
+    rerunLastProposal,
   };
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

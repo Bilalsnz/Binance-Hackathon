@@ -1,10 +1,12 @@
 import type {
   Decision,
+  GuardContext,
   Policy,
   PolicyCheck,
   ProposedAction,
   RuleId,
 } from "./types";
+import { V2_RULE_ORDER } from "./rules";
 
 /**
  * The AgentGuard policy engine — pure, deterministic application logic.
@@ -14,9 +16,16 @@ import type {
  * hidden state: everything it needs arrives as arguments, so it is trivially
  * testable and safe to run on the server, the client or in a unit test.
  *
- * Exposure model: `currentExposureUsd` is the USD notional the agent already
- * holds (buys it executed). Only buys add exposure; sells, internal transfers
- * and withdrawals do not increase capital at risk.
+ * Context: pass a `GuardContext` (book summary) as the third argument for the
+ * aggregate rules (daily-loss halt, per-asset concentration, order rate, daily
+ * notional). A bare number is accepted as shorthand for `{ exposureUsd: n }`
+ * and keeps ad-hoc callers working — but the aggregate rules are only fully
+ * enforced when the caller supplies the book, which is the documented contract
+ * of the Guard API.
+ *
+ * Exposure model: `ctx.exposureUsd` is the USD notional the agent already
+ * holds at ENTRY (buys it executed). Mark-to-market P&L never changes exposure
+ * until realized by a sell; the daily-loss rule counts only realized losses.
  */
 
 const ruleLabel: Record<RuleId, string> = {
@@ -26,6 +35,10 @@ const ruleLabel: Record<RuleId, string> = {
   "risk-per-trade": "Risk per trade",
   market: "Market permission",
   withdrawals: "Withdrawal policy",
+  "daily-loss": "Daily loss halt",
+  concentration: "Concentration",
+  "order-rate": "Order rate",
+  "daily-notional": "Daily buy notional",
 };
 
 /** A failing `PolicyCheck` carries its own readable label through the UI. */
@@ -47,12 +60,18 @@ export function formatUsd(n: number): string {
   return n < 0 ? `-${money(Math.abs(n))}` : money(n);
 }
 
+function toContext(exposureOrCtx: number | GuardContext): GuardContext {
+  return typeof exposureOrCtx === "number" ? { exposureUsd: exposureOrCtx } : exposureOrCtx;
+}
+
 export function evaluateAction(
   policy: Policy,
   action: ProposedAction,
-  currentExposureUsd = 0,
+  exposureOrCtx: number | GuardContext = 0,
   now = new Date().toISOString()
 ): Decision {
+  const ctx = toContext(exposureOrCtx);
+  const currentExposureUsd = ctx.exposureUsd;
   const checks: PolicyCheck[] = [];
   const symbol = action.symbol.toUpperCase();
   const notional = action.notionalUsd;
@@ -180,6 +199,12 @@ export function evaluateAction(
     }
   } else {
     checks.push(check("withdrawals", true, "Not a withdrawal"));
+  }
+
+  // 7-10 · v2 aggregate rules (standalone modules in ./rules). Folded in a
+  // fixed order so the decision card and tests agree on the sequence.
+  for (const ruleFn of V2_RULE_ORDER) {
+    checks.push(ruleFn(policy, action, ctx));
   }
 
   const blockedBy = checks.filter((c) => !c.passed);

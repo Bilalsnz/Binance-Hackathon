@@ -39,7 +39,7 @@ const FEATURES = [
   { icon: SlidersHorizontal, t: "A real policy engine", d: "Deterministic rules — capital, assets, position size, risk, derivatives, withdrawals — not a chatbot with vibes." },
   { icon: ShieldCheck, t: "Human in the loop", d: "Require approval and the agent freezes until a person signs off on the exact action." },
   { icon: OctagonX, t: "Emergency stop", d: "One tap halts the agent. No further research, no further proposals, no executions." },
-  { icon: History, t: "Immutable audit trail", d: "Action → checks → verdict → approval → execution, timestamped and saved on your device." },
+  { icon: History, t: "Tamper-evident audit trail", d: "Action → checks → verdict → approval → execution, timestamped with policy version and evidence, exportable as a hash-chained receipt." },
   { icon: Lock, t: "Secrets never in the web app", d: "No API keys, no withdrawals in Demo Mode, and a built-in no-withdrawal stance to mirror Agent OS." },
   { icon: Sparkles, t: "Built for the demo", d: "A full judge run in 60 seconds with zero signup, zero deposit, zero real orders." },
 ];
@@ -240,7 +240,7 @@ export default function Landing() {
               <FlaskConical className="h-7 w-7 text-ink-950" />
             </span>
             <h2 className="mx-auto mt-5 max-w-xl font-display text-3xl font-bold text-white">
-              Watch it approve one trade and block three others — in 60 seconds.
+              Watch it approve one trade and block four others — in 60 seconds.
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-sm text-slate-300">
               The demo needs no account, no API key and no money. Then rebuild the policy and watch

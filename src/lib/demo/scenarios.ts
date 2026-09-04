@@ -1,4 +1,9 @@
-import type { Policy, ProposedAction, RuleId } from "@/lib/engine/types";
+import type {
+  GuardContext,
+  Policy,
+  ProposedAction,
+  RuleId,
+} from "@/lib/engine/types";
 import { evaluateAction } from "@/lib/engine/policy";
 import { AGENT_NAME, DEMO_SCRIPT, type DemoScriptStep } from "./script";
 
@@ -62,7 +67,7 @@ export function scenarioAction(sc: Scenario): ProposedAction {
   };
 }
 
-/** Read-only engine verdict for a scenario under a given policy/exposure. */
+/** Read-only engine verdict for a scenario under a given policy + book. */
 export interface ScenarioPreview {
   ok: boolean;
   needsApproval: boolean;
@@ -71,12 +76,17 @@ export interface ScenarioPreview {
   reason?: string;
 }
 
+/**
+ * Previews run the SAME engine call the store will make, over the same context
+ * (the full broker book when one is available, not just exposure) — so the
+ * card can never promise a verdict the real run won't deliver.
+ */
 export function previewScenario(
   policy: Policy,
-  exposureUsd: number,
+  ctx: number | GuardContext,
   sc: Scenario
 ): ScenarioPreview {
-  const d = evaluateAction(policy, scenarioAction(sc), exposureUsd);
+  const d = evaluateAction(policy, scenarioAction(sc), ctx);
   if (d.state === "approved") {
     return { ok: true, needsApproval: d.requiresApproval };
   }

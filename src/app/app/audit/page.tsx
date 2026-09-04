@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { History, Play, ShieldAlert, ShieldCheck } from "lucide-react";
+import { FileJson, History, Play, ShieldAlert, ShieldCheck } from "lucide-react";
 import { EventFeed } from "@/components/feed/EventFeed";
+import { ReceiptExport } from "@/components/audit/ReceiptExport";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
 import { cn } from "@/components/ui";
 
@@ -76,6 +77,24 @@ export default function AuditPage() {
           </p>
         </div>
       </header>
+
+      {/* Tamper-evident export */}
+      <div className="card card-pad row items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="label row gap-1.5">
+            <FileJson className="h-3.5 w-3.5 text-cyan-300" /> Export evidence
+          </p>
+          <p className="mt-1 text-xs leading-relaxed muted">
+            Download the full session ledger as a JSON receipt — every action, verdict, reason,
+            mandate version and execution state, chained with SHA-256 so any later edit is
+            detectable. Generated locally in your browser; it is tamper-evident, not signed or
+            notarised.
+          </p>
+        </div>
+        <div className="shrink-0">
+          <ReceiptExport />
+        </div>
+      </div>
 
       {/* Filter chips */}
       <div className="flex gap-2 overflow-x-auto pb-1">

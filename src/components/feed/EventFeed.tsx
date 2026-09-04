@@ -4,6 +4,7 @@ import type { AuditEvent, Tone } from "@/lib/engine/types";
 import { DecisionCard } from "@/components/decision/DecisionCard";
 import { cn, ToneBadge, toneText } from "@/components/ui";
 import { clock } from "./time";
+import { intentLabel } from "@/lib/store/events";
 import {
   CheckCircle2,
   Info,
@@ -178,6 +179,33 @@ function AuditDecision({
         <div className="mt-1">
           <Meta event={event} />
         </div>
+
+        {event.policyVersion !== undefined ? (
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
+            <span className="rounded bg-white/[0.05] px-1.5 py-0.5 font-semibold text-slate-400">
+              policy v{event.policyVersion}
+            </span>
+            <span className="rounded bg-white/[0.05] px-1.5 py-0.5 text-slate-500">
+              {intentLabel(event.intent)}
+            </span>
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5 font-semibold",
+                event.sentToBroker === true
+                  ? "bg-emerald-400/10 text-emerald-300"
+                  : event.verdict === "blocked"
+                    ? "bg-emerald-400/10 text-emerald-300"
+                    : "bg-amber-400/10 text-amber-300"
+              )}
+            >
+              {event.sentToBroker === true
+                ? "sent to demo broker"
+                : event.verdict === "blocked"
+                  ? "never reached a broker"
+                  : "not sent yet"}
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>
   );

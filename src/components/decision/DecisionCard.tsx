@@ -5,7 +5,7 @@ import type { AuditEvent, PolicyCheck } from "@/lib/engine/types";
 import { ruleLabelOf } from "@/lib/engine/policy";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
 import { Btn, cn, ToneBadge } from "@/components/ui";
-import { approveLabel, describeAction } from "@/lib/store/events";
+import { approveLabel, describeAction, intentLabel } from "@/lib/store/events";
 
 function CheckRow({ c }: { c: PolicyCheck }) {
   return (
@@ -128,6 +128,53 @@ export function DecisionCard({ event, embed = false }: { event: AuditEvent; embe
               </span>{" "}
               {event.reason}
             </span>
+          </div>
+        ) : null}
+
+        {/* Evidence — mandate version, provenance, execution state, payload */}
+        {event.payload || event.policyVersion !== undefined || event.prompt ? (
+          <div className="mt-3 rounded-xl border border-white/[0.07] bg-ink-950/60 p-3">
+            <div className="row flex-wrap items-center justify-between gap-1.5">
+              <p className="label !mb-0">Evidence</p>
+              <div className="row flex-wrap gap-1.5 text-[11px]">
+                {event.policyVersion !== undefined ? (
+                  <span className="chip chip-plain">policy v{event.policyVersion}</span>
+                ) : null}
+                <span className="chip chip-plain">{intentLabel(event.intent)}</span>
+                <span
+                  className={cn(
+                    "chip",
+                    event.sentToBroker === true
+                      ? "chip-ok"
+                      : event.verdict === "blocked"
+                        ? "chip-ok"
+                        : "chip-pending"
+                  )}
+                >
+                  {event.sentToBroker === true
+                    ? "sent to demo broker"
+                    : event.verdict === "blocked"
+                      ? "never reached a broker"
+                      : "holding for your OK — not sent"}
+                </span>
+              </div>
+            </div>
+            {event.prompt ? (
+              <p className="mt-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[11px] italic leading-snug text-slate-400">
+                <span className="not-italic font-semibold text-slate-500">Raw instruction: </span>
+                “{event.prompt}”
+              </p>
+            ) : null}
+            {event.payload ? (
+              <details className="mt-2">
+                <summary className="row cursor-pointer select-none gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-200">
+                  Normalized tool-call payload
+                </summary>
+                <pre className="mt-1.5 overflow-x-auto whitespace-pre rounded-lg bg-ink-950/80 px-2.5 py-2 text-[10px] leading-relaxed text-slate-400">
+                  {JSON.stringify(event.payload, null, 2)}
+                </pre>
+              </details>
+            ) : null}
           </div>
         ) : null}
 

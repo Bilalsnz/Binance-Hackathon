@@ -18,17 +18,17 @@ import { cn, SectionTitle, Spinner } from "@/components/ui";
  */
 export function ScenarioDeck() {
   const router = useRouter();
-  const { state, exposureUsd, playScenario } = useAgentGuard();
+  const { state, book, propose } = useAgentGuard();
   const [busy, setBusy] = useState<string | null>(null);
 
   // Live preview of what today's policy would say — recomputed on every edit.
   const previews = useMemo(() => {
     const map = new Map<string, ScenarioPreview>();
     for (const sc of SCENARIOS) {
-      map.set(sc.id, previewScenario(state.policy, exposureUsd, sc));
+      map.set(sc.id, previewScenario(state.policy, book, sc));
     }
     return map;
-  }, [state.policy, exposureUsd]);
+  }, [state.policy, book]);
 
   const running = ["running", "researching", "proposing"].includes(state.status);
   const lock =
@@ -45,7 +45,8 @@ export function ScenarioDeck() {
   const fire = async (sc: Scenario) => {
     if (lock || busy) return;
     setBusy(sc.id);
-    const outcome = await playScenario(sc.id);
+    // One action through the real engine — no preset verdict anywhere.
+    const outcome = await propose(scenarioAction(sc), { intent: "scenario" });
     setBusy(null);
     if (!outcome) return;
     // Needs your OK → the Approvals screen holds the Approve/Decline buttons.

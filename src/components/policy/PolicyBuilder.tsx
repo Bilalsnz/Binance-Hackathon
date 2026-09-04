@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Check,
   Coins,
+  FlaskConical,
   Landmark,
   Percent,
   RotateCcw,
@@ -18,6 +20,7 @@ import { DEFAULT_POLICY } from "@/lib/engine/defaults";
 import { formatUsd, ruleLabelOf } from "@/lib/engine/policy";
 import { previewScenario, SCENARIOS } from "@/lib/demo/scenarios";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
+import { describeAction } from "@/lib/store/events";
 import { Btn, Card, cn, Switch, ToneBadge } from "@/components/ui";
 
 const ASSET_OPTIONS = ["BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "DOGE", "LINK"];
@@ -72,13 +75,24 @@ function posture(policy: Policy): { label: string; tone: "ok" | "pending" | "cri
 }
 
 export function PolicyBuilder() {
-  const { state, setPolicy, exposureUsd } = useAgentGuard();
+  const router = useRouter();
+  const { state, book, setPolicy, setMode, exposureUsd, rerunLastProposal } = useAgentGuard();
   const [draft, setDraft] = useState<Policy>(state.policy);
   const [saved, setSaved] = useState(false);
+  const [rerunWanted, setRerunWanted] = useState(false);
+
+  // "Edit the mandate & re-run this exact action" lands here via ?rerun=1.
+  // Read the URL once on mount (never write back) so no Suspense boundary is
+  // needed around useSearchParams during prerender.
+  useEffect(() => {
+    setRerunWanted(new URLSearchParams(window.location.search).get("rerun") === "1");
+  }, []);
 
   const post = posture(draft);
   const buyingPower = Math.max(0, draft.maxCapitalUsd - exposureUsd);
   const set = (patch: Partial<Policy>) => setDraft((d) => ({ ...d, ...patch }));
+  const rerunTarget = state.lastProposal?.action ?? null;
+  const isRerunMode = rerunWanted && !!rerunTarget;
 
   const toggleAsset = (a: string) =>
     set({
@@ -87,10 +101,23 @@ export function PolicyBuilder() {
         : [...draft.allowedAssets, a],
     });
 
-  const save = () => {
+  const save = async () => {
     setPolicy({ ...draft, updatedAt: new Date().toISOString() });
     setSaved(true);
-    window.setTimeout(() => setSaved(false), 1600);
+    if (!isRerunMode) {
+      window.setTimeout(() => setSaved(false), 1600);
+      return;
+    }
+    // Mid-run proof: after the mandate saves, re-run the SAME proposal against
+    // the new version. Any verdict flip comes from the rules — not a script.
+    if (state.mode !== "demo") {
+      setMode("demo");
+      await new Promise((r) => window.setTimeout(r, 150));
+    }
+    const outcome = await rerunLastProposal();
+    window.setTimeout(() => {
+      router.push(outcome && outcome.verdict === "needs-ok" ? "/app/approvals" : "/app/agent");
+    }, 650);
   };
 
   const stats = useMemo(
@@ -117,6 +144,30 @@ export function PolicyBuilder() {
           </button>
         ))}
       </div>
+
+      {/* Re-test mode — banner shown when a judge arrived via "re-run this action" */}
+      {rerunWanted ? (
+        <Card className="card-pad border-cyan-400/25 bg-cyan-400/[0.05]">
+          {rerunTarget ? (
+            <>
+              <div className="row gap-2 text-sm font-semibold text-cyan-200">
+                <FlaskConical className="h-4 w-4 text-cyan-300" />
+                Re-test mode — this proposal is queued to re-run on Save
+              </div>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
+                After you save, AgentGuard bumps the policy version and re-runs{" "}
+                <span className="font-semibold text-white">{describeAction(rerunTarget)}</span>{" "}
+                against it. Same action, same engine, different rules — the verdict is the proof.
+              </p>
+            </>
+          ) : (
+            <p className="text-xs leading-relaxed text-slate-300">
+              Re-test mode is on, but there is no proposal queued yet. Run one from Home (composer
+              or a scenario), then come back — the exact action will re-run after you save.
+            </p>
+          )}
+        </Card>
+      ) : null}
 
       {/* Identity + posture */}
       <Card className="card-pad">
@@ -268,7 +319,7 @@ export function PolicyBuilder() {
         </p>
         <ul className="mt-3 grid divide-y divide-white/[0.05]">
           {SCENARIOS.map((sc) => {
-            const pv = previewScenario(draft, exposureUsd, sc);
+            const pv = previewScenario(draft, book, sc);
             return (
               <li key={sc.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                 <div className="min-w-0 flex-1">
@@ -321,7 +372,11 @@ export function PolicyBuilder() {
             <Btn onClick={save} className="flex-1" disabled={draft.allowedAssets.length === 0}>
               {saved ? (
                 <>
-                  <Check className="h-4 w-4" strokeWidth={3} /> Mandate live
+                  <Check className="h-4 w-4" strokeWidth={3} /> {isRerunMode ? "Re-running the action…" : "Mandate live"}
+                </>
+              ) : isRerunMode ? (
+                <>
+                  <FlaskConical className="h-4 w-4" /> Save &amp; re-run the action
                 </>
               ) : (
                 <>
