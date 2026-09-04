@@ -82,6 +82,8 @@ export interface ReceiptLink {
   event: AuditEvent["event"];
   ts: string;
   prevHash: string;
+  /** Canonical JSON of the event's evidential fields — what `hash` covers. */
+  body: string;
   hash: string;
 }
 
@@ -119,6 +121,7 @@ export async function buildReceipt(opts: {
       event: e.event,
       ts: e.ts,
       prevHash,
+      body,
       hash: hex,
     });
     prevHash = hex;
@@ -140,10 +143,59 @@ export async function buildReceipt(opts: {
     })),
     links,
     note:
-      "Generated locally in your browser. The SHA-256 hash chain detects any edit, reorder or " +
-      "deletion AFTER export by re-hashing — it is tamper-evident on this device, not signed or " +
-      "notarised, and is not a claim of immutability.",
+      "Generated locally in your browser. Each row hashes the previous row's hash plus that " +
+      "event's canonical JSON, so the chain is self-verifying: run verifyReceipt() on this file " +
+      "to recompute every hash and confirm nothing was edited, reordered or deleted since export. " +
+      "It is tamper-evident on this device — not signed or notarised, and not a claim of " +
+      "immutability.",
   };
+}
+
+export type ReceiptVerifyResult =
+  | { valid: true; links: number; algorithm: string }
+  | { valid: false; links: number; algorithm: string; firstBadLink: number; reason: string };
+
+/**
+ * Recompute the whole chain from the receipt alone (each link carries the body it
+ * hashed) and report whether the file is intact. `valid: true` means every stored
+ * hash matches the recomputed hash AND the stored chain tip matches — i.e. no
+ * body was edited, no link was reordered, removed or re-hashed after export.
+ */
+export async function verifyReceipt(receipt: AgentGuardReceipt): Promise<ReceiptVerifyResult> {
+  let prevHash = "GENESIS";
+  for (let i = 0; i < receipt.links.length; i++) {
+    const link = receipt.links[i];
+    const recomputed = await hashText(`${link.prevHash}\n${link.body}`);
+    if (link.hash !== recomputed.hex) {
+      return {
+        valid: false,
+        links: receipt.links.length,
+        algorithm: recomputed.algorithm,
+        firstBadLink: i,
+        reason: "stored hash does not match the recomputed hash for this event's body",
+      };
+    }
+    if (i > 0 && link.prevHash !== receipt.links[i - 1].hash) {
+      return {
+        valid: false,
+        links: receipt.links.length,
+        algorithm: recomputed.algorithm,
+        firstBadLink: i,
+        reason: "link does not chain to the previous row's hash (reordered or inserted)",
+      };
+    }
+    prevHash = link.hash;
+  }
+  if (prevHash !== receipt.chainTip) {
+    return {
+      valid: false,
+      links: receipt.links.length,
+      algorithm: receipt.algorithm,
+      firstBadLink: receipt.links.length,
+      reason: "chain tip does not match the last recomputed hash (a row was removed)",
+    };
+  }
+  return { valid: true, links: receipt.links.length, algorithm: receipt.algorithm };
 }
 
 /** Trigger a JSON download of a receipt. */
