@@ -73,9 +73,7 @@ export default function Landing() {
           <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 via-violet-500 to-fuchsia-500 shadow-glow">
             <Shield className="h-[18px] w-[18px] text-ink-950" strokeWidth={2.6} />
           </span>
-          <span className="h-display text-lg text-white">
-            Agent<span className="text-gradient">Guard</span>
-          </span>
+          <span className="h-display text-lg text-white">Mandate</span>
         </Link>
         <div className="row gap-2">
           <a href="#how" className="hidden text-sm font-medium text-slate-300 hover:text-white sm:block">
@@ -85,8 +83,8 @@ export default function Landing() {
             href="https://github.com/Bilalsnz/Binance-Hackathon"
             target="_blank"
             rel="noreferrer"
-            title="AgentGuard source on GitHub"
-            aria-label="AgentGuard source on GitHub"
+            title="Mandate source on GitHub"
+            aria-label="Mandate source on GitHub"
             className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-cyan-400/40 hover:bg-white/[0.08] hover:text-white"
           >
             <Github className="h-[18px] w-[18px]" />
@@ -110,8 +108,8 @@ export default function Landing() {
               <span className="text-gradient">Your rules decide whether it can.</span>
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
-              AgentGuard is a policy and safety layer for AI agents that interact with Binance. Your
-              agent researches and proposes — AgentGuard evaluates every action against your
+              Mandate is a policy and safety layer for AI agents that interact with Binance. Your
+              agent researches and proposes — Mandate evaluates every action against your
               mandate before anything touches an exchange, then logs it all to an audit trail.
             </p>
             <div className="row mt-7 flex-wrap gap-3">
@@ -177,7 +175,7 @@ export default function Landing() {
       {/* Features */}
       <section className="relative z-10 mx-auto max-w-6xl px-5 pt-24">
         <div className="text-center">
-          <span className="chip chip-ok">Why AgentGuard</span>
+          <span className="chip chip-ok">Why Mandate</span>
           <h2 className="mt-3 font-display text-3xl font-bold text-white sm:text-4xl">
             Not a crypto chatbot.<br />A <span className="text-gradient">guardrail</span>.
           </h2>
@@ -202,12 +200,12 @@ export default function Landing() {
             <div>
               <span className="chip chip-violet">Built for Binance Agent OS</span>
               <h2 className="mt-3 font-display text-2xl font-bold text-white sm:text-3xl">
-                AgentGuard sits in front of your agent. Binance Agent OS does the rest.
+                Mandate sits in front of your agent. Binance Agent OS does the rest.
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-300">
                 Agent OS connects agents to Binance through its MCP server — market data, an Agentic
                 sub-account, scoped trading and transfers, with every trade confirmed by you and no
-                withdrawal scope. AgentGuard adds your personal mandate on top: the deterministic
+                withdrawal scope. Mandate adds your personal mandate on top: the deterministic
                 policy check that decides what the agent is even <em>allowed</em> to propose.
               </p>
               <div className="row mt-5 flex-wrap gap-2 text-[11px] muted">
@@ -267,7 +265,7 @@ export default function Landing() {
             <div className="row gap-2">
               <Shield className="h-4 w-4 text-slate-600" />
               <span>
-                AgentGuard is a policy &amp; safety layer and is <span className="font-semibold text-slate-400">not financial advice</span>.
+                Mandate is a policy &amp; safety layer and is <span className="font-semibold text-slate-400">not financial advice</span>.
                 Digital assets are volatile. Demo Mode never executes a real order.
               </span>
             </div>

@@ -30,7 +30,7 @@ function CheckRow({ c }: { c: PolicyCheck }) {
 }
 
 /**
- * The Decision Card — the single most important surface in AgentGuard.
+ * The Decision Card — the single most important surface in Mandate.
  * Shows the proposed action, every policy check, and the verdict with the
  * exact reason. If the action needs a human, it renders Approve / Decline.
  */

@@ -139,7 +139,7 @@ export default function AuditPage() {
 
       <p className="row justify-center gap-1.5 text-[11px] muted">
         <ShieldAlert className="h-3.5 w-3.5 text-slate-600" />
-        AgentGuard is a policy &amp; safety layer — not financial advice.
+        Mandate is a policy &amp; safety layer — not financial advice.
       </p>
     </div>
   );

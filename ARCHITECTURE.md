@@ -1,4 +1,4 @@
-# AgentGuard — Architecture
+# Mandate — Architecture
 
 ## Flow
 
@@ -8,10 +8,10 @@ everything around it (agent, approvals, broker) is an adapter around that core.
 ```mermaid
 flowchart LR
     subgraph You
-        U[User / Judge] --> UI[AgentGuard UI]
+        U[User / Judge] --> UI[Mandate UI]
     end
 
-    subgraph AgentGuard
+    subgraph Mandate
         UI --> POL[Policy<br/>builder]
         UI --> RUN[Dashboard<br/>Run · Stop · Resume]
         UI --> APP[Approvals screen]
@@ -40,7 +40,7 @@ flowchart LR
     U --> FEED[(Audit trail<br/>localStorage)]
 ```
 
-The design rule: **AgentGuard decides intent, adapters execute**. Demo Mode swaps the agent and the
+The design rule: **Mandate decides intent, adapters execute**. Demo Mode swaps the agent and the
 broker for honest simulations; Live Mode keeps the exact same engine and approval gates.
 
 ## Data model
@@ -142,7 +142,7 @@ What was verified and how, so nobody assumes invented APIs:
   `BINANCE_SECRET_KEY` / `BINANCE_API_ENV` ∈ `prod|testnet|demo`. No official `binance-mcp` or
   `binance-agent-os` repository exists under `org:binance` (checked via GitHub API); the
   `binance-mcp-server` packages on npm are third-party and were **not** treated as authoritative.
-- **Consequence:** AgentGuard's only live Binance call is the *public keyless* market surface
+- **Consequence:** Mandate's only live Binance call is the *public keyless* market surface
   documented in the developer quick-start (`GET /api/v3/ticker/24hr`). Everything requiring
   credentials/consent is gated behind the user's own desktop Agent OS wiring and documented as a
   runbook — never faked, never given credentials.

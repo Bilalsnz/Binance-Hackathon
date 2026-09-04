@@ -1,10 +1,10 @@
 import type { NormalizedCall, ProposedAction } from "./types";
 
 /**
- * Normalize a proposed action into the tool-call-shaped payload AgentGuard
+ * Normalize a proposed action into the tool-call-shaped payload Mandate
  * records as evidence and passes to its Guard API. It is a 1:1, lossless
  * projection of the action — nothing here invents fields the engine did not
- * see. The shape is AgentGuard's own normalized contract; a desktop
+ * see. The shape is Mandate's own normalized contract; a desktop
  * integration maps its agent's raw tool args into this shape BEFORE the
  * underlying Binance tool executes (see ARCHITECTURE.md for the boundary).
  */

@@ -9,7 +9,7 @@ import type {
 import { V2_RULE_ORDER } from "./rules";
 
 /**
- * The AgentGuard policy engine — pure, deterministic application logic.
+ * The Mandate policy engine — pure, deterministic application logic.
  *
  * `evaluateAction` runs a proposed action against every rule the policy
  * declares and returns a structured `Decision`. The engine has no I/O and no

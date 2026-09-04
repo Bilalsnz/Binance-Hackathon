@@ -3,7 +3,7 @@ import { FALLBACK_QUOTES, type Quote, type QuoteMap } from "@/lib/demo/quotes";
 /**
  * Fetch a small market snapshot for the demo's research feed.
  *
- * Research data is the *only* live Binance call AgentGuard makes and it is
+ * Research data is the *only* live Binance call Mandate makes and it is
  * public and keyless — the exact surface Binance documents for agents
  * (`GET /api/v3/ticker/24hr`). Quotes are verified for the assets the policy
  * cares about. If the call fails (offline venue, region block, cold start)

@@ -1,5 +1,5 @@
 /**
- * AgentGuard domain model.
+ * Mandate domain model.
  *
  * Everything flows through one pipeline:
  *   Policy (user rules)  ×  ProposedAction (agent intent) + GuardContext (book)
@@ -108,9 +108,9 @@ export interface ProposedAction {
 }
 
 /**
- * The normalized, tool-call-shaped form of an intent. This is what AgentGuard
+ * The normalized, tool-call-shaped form of an intent. This is what Mandate
  * records as evidence and what a desktop Guard-API / MCP integration would hand
- * to the guard BEFORE the underlying Binance tool executes. It is AgentGuard's
+ * to the guard BEFORE the underlying Binance tool executes. It is Mandate's
  * normalized shape (derived 1:1 from the action) — not a claim about Binance's
  * wire format.
  */

@@ -129,7 +129,7 @@ export async function buildReceipt(opts: {
 
   return {
     schema: RECEIPT_SCHEMA,
-    title: "AgentGuard session receipt",
+    title: "Mandate session receipt",
     generatedLocally: true,
     signer: null,
     algorithm,
@@ -205,7 +205,7 @@ export function downloadReceipt(receipt: AgentGuardReceipt): void {
   const a = document.createElement("a");
   const stamp = receipt.exportedAt.replace(/[:.]/g, "-");
   a.href = url;
-  a.download = `agentguard-receipt-${stamp}.json`;
+  a.download = `mandate-receipt-${stamp}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();

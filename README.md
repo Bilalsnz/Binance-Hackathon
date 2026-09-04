@@ -1,14 +1,14 @@
-# AgentGuard 🛡️
+# Mandate 🛡️
 
 **Your AI can trade. Your rules decide whether it can.**
 
-AgentGuard is a **policy & safety layer for AI agents that interact with Binance** — built for the
+Mandate is a **policy & safety layer for AI agents that interact with Binance** — built for the
 **Binance Agent OS Mini Hackathon · Track A (Agent Creation)**. The agent researches and *proposes*;
-AgentGuard evaluates every proposed action against the mandate *you* define — capital limit, allowed
+Mandate evaluates every proposed action against the mandate *you* define — capital limit, allowed
 assets, max position size, max loss, spot/futures permission, withdrawals, approval-required — then
 records every decision to an audit trail.
 
-> AgentGuard is a policy layer, **not** a crypto chatbot, market analyst, price predictor, or an
+> Mandate is a policy layer, **not** a crypto chatbot, market analyst, price predictor, or an
 > ordinary trading bot. The *controlled agent workflow* is the product.
 
 ![Next.js](https://img.shields.io/badge/Next.js-14.2-000?logo=nextdotjs) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript) ![Tailwind](https://img.shields.io/badge/Tailwind-3.4-06b6d4?logo=tailwindcss) ![cost](https://img.shields.io/badge/cost-%240-blue) ![tests](https://img.shields.io/badge/tests-14%20passing-emerald)
@@ -18,7 +18,7 @@ records every decision to an audit trail.
 ## Why this exists
 
 AI agents are being handed real exchange access. Today's guardrails are mostly *prompts* — "be
-careful", "don't lose money". Prompts are not policy. AgentGuard makes safety **deterministic**: a
+careful", "don't lose money". Prompts are not policy. Mandate makes safety **deterministic**: a
 tiny, testable engine checks every action an agent proposes against rules you control, and produces a
 structured, auditable verdict the agent cannot argue with.
 
@@ -29,7 +29,7 @@ USER GOAL → AGENT RESEARCH → PROPOSED ACTION → POLICY CHECK → APPROVED /
 
 ### The judge flow (60 seconds, zero setup)
 
-1. Open **AgentGuard → Home → “Run the 60-second demo”**.
+1. Open **Mandate → Home → “Run the 60-second demo”**.
 2. Agent `Nova` researches BTC, then proposes **Buy $100 BTC (spot)** → policy passes → **APPROVED — needs your OK**. The run pauses here.
 3. You tap **Approve** on the decision card → demo broker executes (simulated fill) → audit logged → the run resumes.
 4. Nova proposes **Buy $250 BTC** → **BLOCKED** (exceeds the $150 position cap).
@@ -87,7 +87,7 @@ No environment variables are required. The app runs fully in **Demo Mode** out o
 
 ## Demo Mode vs Live Mode
 
-AgentGuard has two explicitly distinct modes — it never blurs them.
+Mandate has two explicitly distinct modes — it never blurs them.
 
 | | Demo Mode (default) | Live view |
 |---|---|---|
@@ -97,26 +97,26 @@ AgentGuard has two explicitly distinct modes — it never blurs them.
 | Credentials | None | None stored in this app, ever |
 | Purpose | Judges run the full product safely | Reference wiring (see below) |
 
-### Binance Agent OS — what AgentGuard actually uses, and why
+### Binance Agent OS — what Mandate actually uses, and why
 
-AgentGuard is built to sit **in front of** a Binance-agent connection. Binance **Agent OS**
+Mandate is built to sit **in front of** a Binance-agent connection. Binance **Agent OS**
 ([binance.com/en/agent-os](https://www.binance.com/en/agent-os)) is the developer platform that
 connects agents to Binance via the **Binance MCP Server**, exchange APIs, and the open
-[Binance Skills Hub](https://github.com/binance/binance-skills-hub). AgentGuard adds the *CONTROL*
+[Binance Skills Hub](https://github.com/binance/binance-skills-hub). Mandate adds the *CONTROL*
 layer: your personal mandate enforced deterministically before the agent's intent reaches an
 exchange.
 
-Record of Binance Agent OS capabilities AgentGuard is aligned to and why (verified against official
+Record of Binance Agent OS capabilities Mandate is aligned to and why (verified against official
 docs, Sep 2026 — see the research log in `ARCHITECTURE.md`):
 
-| Agent OS capability (official) | Why AgentGuard cares | How it's represented here |
+| Agent OS capability (official) | Why Mandate cares | How it's represented here |
 |---|---|---|
-| **Market data scope** (public, no auth) | The agent's research must never require secrets | AgentGuard research feed calls the same keyless public surface (`/api/v3/ticker/24hr`) with a labelled live/fallback path |
+| **Market data scope** (public, no auth) | The agent's research must never require secrets | Mandate research feed calls the same keyless public surface (`/api/v3/ticker/24hr`) with a labelled live/fallback path |
 | **Dedicated Agentic sub-account** | Isolation is the safest default for an autonomous agent | Demo broker isolates fills; UI communicates sub-account isolation |
-| **Trade scope** (spot/margin/convert/USDⓈ-M/COIN-M) | AgentGuard's `market` + `risk` rules gate *which* of these may be proposed | `spot`/`futures` markets in the policy engine; futures disabled by default |
+| **Trade scope** (spot/margin/convert/USDⓈ-M/COIN-M) | Mandate's `market` + `risk` rules gate *which* of these may be proposed | `spot`/`futures` markets in the policy engine; futures disabled by default |
 | **Transfer scope** (inside sub-account only) | Transfers are a real agent power worth gating | `transfer`/`withdraw` kinds exist in the model; withdrawals default-off |
-| **No withdrawal scope exists** | Binance structurally prevents agent withdrawals to external addresses | AgentGuard mirrors it as the `withdrawals` rule (fail-closed) |
-| **Every trade/transfer confirmed by you first** | Approval-required is AgentGuard's core value | `requireApproval` rule + Approvals screen + re-check on approve |
+| **No withdrawal scope exists** | Binance structurally prevents agent withdrawals to external addresses | Mandate mirrors it as the `withdrawals` rule (fail-closed) |
+| **Every trade/transfer confirmed by you first** | Approval-required is Mandate's core value | `requireApproval` rule + Approvals screen + re-check on approve |
 | **OAuth consent to your Agentic sub-account, desktop-only** | The MCP endpoint is personal and must never leak | Live wiring happens on your machine/account — never in this repo or chat |
 
 **Honest limitation (why there is no one-click “Live” here):** connecting the hosted Binance MCP
@@ -130,14 +130,14 @@ in Demo Mode and documents the live wiring runbook for the judge/user to run on 
 1. Follow the official Agent OS steps to connect your MCP client (Claude Code etc.) to the
    **Binance MCP Server** and authorize a scoped **Agentic sub-account** (no withdrawal scope).
    Fund the sub-account yourself, only with what the agent may trade.
-2. Run AgentGuard locally (`npm run dev`), set your mandate in the Policy builder, and press
+2. Run Mandate locally (`npm run dev`), set your mandate in the Policy builder, and press
    **Run**.
-3. Let your MCP-connected agent research/propose; run each proposal through AgentGuard's
+3. Let your MCP-connected agent research/propose; run each proposal through Mandate's
    `evaluateAction` (it is a pure function — call it from any script) and feed approved intents to
    your agent for execution. Agent OS itself will still ask you to confirm before it sends the order.
 4. Stay in Demo Mode for judging — it requires nothing and executes nothing.
 
-AgentGuard itself **never places a real order from the web app**, never holds or asks for your Binance
+Mandate itself **never places a real order from the web app**, never holds or asks for your Binance
 API keys, and never bypasses Binance auth, permissions, or regional restrictions.
 
 ---
@@ -200,7 +200,7 @@ The Proposal Lab (Home) has two attack surfaces, both judged by the same determi
   and stops at the first refusal, so the demo proves that many small buys cannot exceed the
   cumulative per-asset cap (covered by dedicated unit tests in `v2.test.ts` and `stacking.test.ts`).
 
-Every decision is shown through the **tool-call gateway**: the would-be call AgentGuard sits in
+Every decision is shown through the **tool-call gateway**: the would-be call Mandate sits in
 front of, answered `DENY` (nothing sent), `HOLD` (needs your approval) or `EXEC · demo` (simulated
 demo-broker fill). The gateway never claims a real MCP tool name — the normalized payload is the
 evidence. Scenario cards deliberately reveal no verdict before you tap them, so nothing on the
@@ -241,9 +241,9 @@ is claimed.
 - **No secrets in frontend code.** No API keys anywhere; nothing is committed under `.env*`.
 - **Demo Mode executes nothing.** Executions are explicitly simulated and labelled.
 - **Human-in-the-loop.** `requireApproval` freezes the agent until a person approves the exact action
-  — and AgentGuard re-checks the action against the *current* policy at approval time.
+  — and Mandate re-checks the action against the *current* policy at approval time.
 - **Emergency stop.** One tap halts research, proposals and executions (see Home header).
-- **Binance-safe by construction.** AgentGuard mirrors Agent OS's no-withdrawal stance and never
+- **Binance-safe by construction.** Mandate mirrors Agent OS's no-withdrawal stance and never
   bypasses Binance authentication or permissions.
 - **Not financial advice.** Stated in the app and the footer. Crypto is volatile; agents make
   mistakes; you are responsible for your own trading decisions.

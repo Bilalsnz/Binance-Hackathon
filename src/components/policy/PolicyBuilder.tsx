@@ -155,7 +155,7 @@ export function PolicyBuilder() {
                 Re-test mode — this proposal is queued to re-run on Save
               </div>
               <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
-                After you save, AgentGuard bumps the policy version and re-runs{" "}
+                After you save, Mandate bumps the policy version and re-runs{" "}
                 <span className="font-semibold text-white">{describeAction(rerunTarget)}</span>{" "}
                 against it. Same action, same engine, different rules — the verdict is the proof.
               </p>

@@ -388,7 +388,7 @@ function Composer({
 
       {kind === "withdraw" ? (
         <p className="rounded-lg border border-rose-400/20 bg-rose-500/[0.06] px-3 py-2 text-xs text-rose-200/90">
-          Withdrawals move funds <em>out</em>. AgentGuard can only allow them if the mandate turns the
+          Withdrawals move funds <em>out</em>. Mandate can only allow them if the mandate turns the
           withdrawal rule on — try it, then watch the withdrawal rule refuse it.
         </p>
       ) : (

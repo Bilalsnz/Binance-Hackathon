@@ -178,7 +178,7 @@ export function AgentPanel() {
         ) : live ? (
           <div className="grid gap-2">
             <p className="rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
-              Live view is reference-only — AgentGuard never connects from the web and never places
+              Live view is reference-only — Mandate never connects from the web and never places
               a live order. Flip back to Demo to replay the judge flow.
             </p>
             <Btn className="w-full !py-3 text-base" onClick={primaryRun}>

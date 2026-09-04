@@ -24,7 +24,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("[AgentGuard] render error:", error, info);
+    console.error("[Mandate] render error:", error, info);
   }
 
   render() {

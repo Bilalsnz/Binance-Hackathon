@@ -32,7 +32,7 @@ export type DemoScriptStep =
 /** Narrative between the proposal and the policy verdict. */
 export const AGENT_NAME = "Nova";
 export const AGENT_PERSONA =
-  "A cautious trading agent connected through Binance Agent OS. It researches public market data, then proposes actions — which AgentGuard checks against your mandate before anything touches an exchange.";
+  "A cautious trading agent connected through Binance Agent OS. It researches public market data, then proposes actions — which Mandate checks against your mandate before anything touches an exchange.";
 
 export const DEMO_SCRIPT: DemoScriptStep[] = [
   {

@@ -22,7 +22,7 @@ export default function DashboardPage() {
           <span className="text-gradient">Your rules decide whether it can.</span>
         </h1>
         <p className="mt-1.5 text-sm muted">
-          AgentGuard checks every action your agent proposes against the mandate you set — before
+          Mandate checks every action your agent proposes against the mandate you set — before
           anything reaches an exchange.
         </p>
       </header>

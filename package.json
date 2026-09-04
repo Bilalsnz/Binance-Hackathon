@@ -2,7 +2,7 @@
   "name": "agentguard",
   "version": "1.0.0",
   "private": true,
-  "description": "AgentGuard — a policy & safety layer for AI agents that can trade on Binance. Your AI can trade. Your rules decide whether it can.",
+  "description": "Mandate — a policy & safety layer for AI agents that can trade on Binance. Your AI can trade. Your rules decide whether it can.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

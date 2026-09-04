@@ -5,10 +5,10 @@ import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
 import { Card, cn, ToneBadge } from "@/components/ui";
 
 /**
- * How AgentGuard is wired right now. In Demo Mode this is the simulated
+ * How Mandate is wired right now. In Demo Mode this is the simulated
  * broker; in the Live view it shows the honest Binance Agent OS picture:
  * a *reference* status (never faked as connected from the web), the scoped
- * permissions Binance actually grants an agent, and AgentGuard's own
+ * permissions Binance actually grants an agent, and Mandate's own
  * enforcement row. The research feed source is always labelled too.
  */
 export function ConnectionCard() {
@@ -47,7 +47,7 @@ export function ConnectionCard() {
                 </span>
               </p>
               <p className="text-amber-200/70">
-                AgentGuard is a policy layer — it never holds your keys and never places a live
+                Mandate is a policy layer — it never holds your keys and never places a live
                 order itself. A real Agent OS connection lives on your desktop, inside your own MCP
                 client, scoped to your Agentic sub-account. This view never fakes one.
               </p>
@@ -90,17 +90,17 @@ export function ConnectionCard() {
           <li className="row gap-2 text-slate-300">
             <XCircle className="h-4 w-4 shrink-0 text-rose-300" />
             <span>
-              Withdrawals — no scope exists · AgentGuard mirrors it with the withdrawal rule
+              Withdrawals — no scope exists · Mandate mirrors it with the withdrawal rule
             </span>
           </li>
         </ul>
       </div>
 
-      {/* AgentGuard's own enforcement */}
+      {/* Mandate's own enforcement */}
       <div className="row gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] px-3 py-2.5 text-xs text-cyan-200">
         <ShieldCheck className="h-4 w-4 shrink-0 text-cyan-300" />
         <span>
-          AgentGuard policy enforcement: <span className="font-bold">ACTIVE</span>
+          Mandate policy enforcement: <span className="font-bold">ACTIVE</span>
           {live ? " — approved actions still need your confirmation inside Agent OS." : " — every demo action is checked against your mandate."}
         </span>
       </div>

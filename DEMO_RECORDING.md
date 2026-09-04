@@ -1,4 +1,4 @@
-# AgentGuard — 60-second demo recording script
+# Mandate — 60-second demo recording script
 
 **Goal:** one continuous screen recording that walks: **compose → gate → approve/block → mandate edit → stacking**.
 No cuts required. Total ≈ 60 s. Every verdict in this script is produced live by the engine from the

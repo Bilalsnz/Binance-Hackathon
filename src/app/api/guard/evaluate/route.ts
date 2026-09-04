@@ -10,7 +10,7 @@ import { evaluateGuardRequest, type GuardEvaluateRequest } from "@/lib/guard/eva
  * tool call on the response.
  *
  * It never holds keys, never connects to Binance and never executes anything.
- * See ARCHITECTURE.md §"where AgentGuard sits" for the exact boundary.
+ * See ARCHITECTURE.md §"where Mandate sits" for the exact boundary.
  *
  * Body:
  *   { policy, action: {symbol, side, notionalUsd, kind?, market?, estRiskUsd?, goal?, actor?}, context? }

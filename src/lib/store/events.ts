@@ -94,7 +94,7 @@ export function mkEvent(seed: EventSeed): AuditEvent {
   return {
     id: uid(),
     ts: isoNow(),
-    actor: seed.actor ?? "AgentGuard",
+    actor: seed.actor ?? "Mandate",
     mode: seed.mode ?? "demo",
     source: seed.source ?? "simulated",
     event: seed.event,

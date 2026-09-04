@@ -4,7 +4,7 @@ import { Ban, CheckCircle2, Hourglass } from "lucide-react";
 import { cn } from "@/components/ui";
 
 /**
- * "Tool-call gateway" strip — renders the would-be tool call that AgentGuard
+ * "Tool-call gateway" strip — renders the would-be tool call that Mandate
  * sits in front of, with the guard's verdict on it.
  *
  *   agent intent → [ GUARD ] → broker / exchange
@@ -67,7 +67,7 @@ export function ToolGate({
     <div className={cn("mt-3 overflow-hidden rounded-xl border", t.border, t.bg)}>
       <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
         <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-          AgentGuard tool-call gateway
+          Mandate tool-call gateway
         </span>
         <span
           className={cn(

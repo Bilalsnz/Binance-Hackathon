@@ -20,7 +20,7 @@ import type {
  * Agent OS agent calls BEFORE executing the underlying Binance tool:
  *
  *   const g = await fetch("…/api/guard/evaluate", { method: "POST", body })  → JSON
- *   if (!g.ok) throw new Error(`blocked by AgentGuard: ${g.reason}`)
+ *   if (!g.ok) throw new Error(`blocked by Mandate: ${g.reason}`)
  *   // only NOW invoke the real Binance MCP tool
  *
  * The route never holds keys, never connects to Binance and never executes

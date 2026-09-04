@@ -7,12 +7,12 @@ const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" }
 
 export const metadata: Metadata = {
   title: {
-    default: "AgentGuard — the policy layer for AI agents that trade Binance",
-    template: "%s · AgentGuard",
+    default: "Mandate — the policy layer for AI agents that trade Binance",
+    template: "%s · Mandate",
   },
   description:
-    "Your AI can trade. Your rules decide whether it can. AgentGuard evaluates every agent action against your mandate before anything touches an exchange — approved, blocked, audited.",
-  applicationName: "AgentGuard",
+    "Your AI can trade. Your rules decide whether it can. Mandate evaluates every agent action against your mandate before anything touches an exchange — approved, blocked, audited.",
+  applicationName: "Mandate",
   keywords: [
     "Binance Agent OS",
     "AI agent safety",

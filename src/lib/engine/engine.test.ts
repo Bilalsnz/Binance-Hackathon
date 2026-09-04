@@ -46,7 +46,7 @@ function blockedByRule(decision: ReturnType<typeof evaluateAction>, rule: string
   );
 }
 
-describe("AgentGuard policy engine", () => {
+describe("Mandate policy engine", () => {
   it("approves an in-policy BTC buy that stays within every limit", () => {
     const d = evaluateAction(makePolicy(), action({ notionalUsd: 100, estRiskUsd: 12 }), 0, NOW);
     approved(d);

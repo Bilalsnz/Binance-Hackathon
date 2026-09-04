@@ -723,7 +723,7 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
             actor: "You",
             summary:
               mode === "live"
-                ? "Live view is reference only — AgentGuard never connects from the web. Wire your own Binance Agent OS agent on your desktop; the policy gates below stay identical."
+                ? "Live view is reference only — Mandate never connects from the web. Wire your own Binance Agent OS agent on your desktop; the policy gates below stay identical."
                 : "Back to Demo Mode — the agent runs on the simulated broker.",
             tone: mode === "live" ? "warn" : "info",
             mode,

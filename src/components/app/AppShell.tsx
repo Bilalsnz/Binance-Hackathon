@@ -31,9 +31,7 @@ function Brand() {
       <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 via-violet-500 to-fuchsia-500 shadow-glow">
         <Shield className="h-[18px] w-[18px] text-ink-950" strokeWidth={2.6} />
       </span>
-      <span className="h-display text-[17px] text-white">
-        Agent<span className="text-gradient">Guard</span>
-      </span>
+      <span className="h-display text-[17px] text-white">Mandate</span>
     </Link>
   );
 }
@@ -81,7 +79,7 @@ function ModeToggle() {
         type="button"
         aria-pressed={!demo}
         onClick={() => setMode("live")}
-        title="Live view — reference only; AgentGuard never connects from the web"
+        title="Live view — reference only; Mandate never connects from the web"
         className={cn(
           "row gap-1.5 rounded-[10px] px-2.5 py-1.5 transition active:scale-95",
           !demo
