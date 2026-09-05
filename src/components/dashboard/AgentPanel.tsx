@@ -41,7 +41,13 @@ export function AgentPanel() {
   } = useAgentGuard();
 
   const status = state.status;
-  const meta = agentStatusMeta(status);
+  // "Needs your OK" and the approve gate are driven by the pending QUEUE, not
+  // by the raw status field: the moment the last pending action resolves the
+  // queue is empty and Nova drops back to Idle — it can never be left saying
+  // "Needs your OK" over an already-handled approval. Emergency stop outranks
+  // a waiting approval so a frozen agent still reads as stopped.
+  const awaiting = pending.length > 0 && status !== "stopped";
+  const meta = agentStatusMeta(awaiting ? "awaiting-approval" : status);
   const live = state.mode === "live";
   const hasRun = state.events.length > 0;
   const running = RUNNING.includes(status);
@@ -145,7 +151,7 @@ export function AgentPanel() {
               </Btn>
             </div>
           </div>
-        ) : status === "awaiting-approval" ? (
+        ) : awaiting ? (
           <div className="grid gap-2">
             <p className="row gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
               <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-amber-300 text-ink-950">

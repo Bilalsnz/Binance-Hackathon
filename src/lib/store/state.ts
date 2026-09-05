@@ -129,7 +129,13 @@ export function computeBook(events: AuditEvent[]): GuardContext {
   };
 }
 
-/** Audit rows that still await a human decision. */
+/**
+ * Audit rows that still await a human decision. This derived list is the SINGLE
+ * source of truth for "Needs your OK" and the Proposal-lab / scenario locks: an
+ * action is pending if and only if it appears here, and approving or declining
+ * it (resolve-approval) removes it by flipping `approvalState` away from
+ * `awaiting`. `clear-all` wipes it too, because it is derived from `events`.
+ */
 export function pendingApprovals(events: AuditEvent[]): AuditEvent[] {
   return events.filter(
     (e) =>
@@ -140,10 +146,32 @@ export function pendingApprovals(events: AuditEvent[]): AuditEvent[] {
   );
 }
 
+/**
+ * The agent status implied by the pending queue. The raw `status` field must
+ * never disagree with this: when the queue empties the agent drops back to
+ * IDLE (never left parked on a stale awaiting-approval), and while anything is
+ * still pending it stays parked. Emergency stop is an explicit user act and
+ * outranks both.
+ */
+function statusForPending(status: AgentStatus, events: AuditEvent[]): AgentStatus {
+  if (status === "stopped") return "stopped";
+  return pendingApprovals(events).length > 0 ? "awaiting-approval" : "idle";
+}
+
 export function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case "hydrate":
-      return { ...state, ...action.patch, status: "idle" };
+    case "hydrate": {
+      // A reload must not strand the app either way: no pending work → idle;
+      // an unresolved approval persisted in the feed → parked at the gate so
+      // the Approvals queue is surfaced instead of silently ignored.
+      const events = action.patch.events ?? state.events;
+      return {
+        ...state,
+        ...action.patch,
+        events,
+        status: statusForPending("idle", events),
+      };
+    }
 
     case "begin-demo":
       return {
@@ -220,7 +248,16 @@ export function reducer(state: AppState, action: AppAction): AppState {
       );
       const base = marked.length;
       const followup = action.followup.map((e, i) => ({ ...e, seq: base + i }));
-      return { ...state, events: [...marked, ...followup] };
+      const events = [...marked, ...followup];
+      return {
+        ...state,
+        events,
+        // Approving/declining POPS the row off the pending queue (it is no
+        // longer `awaiting` above) and recomputes the status from what is left:
+        // the last pending action resolved → IDLE (lab unlocks, Nova stops
+        // saying "Needs your OK"); more rows still open → stays parked.
+        status: statusForPending(state.status, events),
+      };
     }
 
     default:

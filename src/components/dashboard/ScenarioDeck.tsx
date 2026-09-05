@@ -21,17 +21,17 @@ import { cn, SectionTitle, Spinner } from "@/components/ui";
  */
 export function ScenarioDeck() {
   const router = useRouter();
-  const { state, propose } = useAgentGuard();
+  const { state, pending, propose } = useAgentGuard();
   const [busy, setBusy] = useState<string | null>(null);
 
   const running = ["running", "researching", "proposing"].includes(state.status);
   const lock =
     state.mode !== "demo"
       ? "Live view is reference-only — switch to Demo to play a scenario."
-      : running
-        ? "The demo is mid-run — let it finish or Stop it, then try a scenario."
-        : state.status === "awaiting-approval"
-          ? "Approve or decline the pending action first."
+      : pending.length > 0
+        ? "Approve or decline the pending action first."
+        : running
+          ? "The demo is mid-run — let it finish or Stop it, then try a scenario."
           : state.status === "stopped"
             ? "Emergency stop is engaged — Resume the agent first."
             : null;

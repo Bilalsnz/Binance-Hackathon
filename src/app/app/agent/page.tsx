@@ -13,7 +13,11 @@ const PIPELINE = ["Research", "Propose", "Policy check", "Approve", "Execute"];
 export default function AgentPage() {
   const { state, runDemo, resume, pending, setMode } = useAgentGuard();
   const live = ["researching", "proposing", "running"].includes(state.status);
-  const meta = agentStatusMeta(state.status);
+  // The header badge and pipeline track the pending QUEUE for the approval
+  // phase — not the raw status field — so an already-handled approval can
+  // never leave the page claiming the agent still needs an OK.
+  const awaiting = pending.length > 0;
+  const meta = agentStatusMeta(awaiting ? "awaiting-approval" : state.status);
   const endRef = useRef<HTMLDivElement>(null);
 
   // Chronological feed — keep the newest event in view.
@@ -88,7 +92,7 @@ export default function AgentPage() {
                   ? 0
                   : state.status === "proposing"
                     ? 1
-                    : state.status === "awaiting-approval"
+                    : awaiting
                       ? 3
                       : state.scriptDone
                         ? 5

@@ -273,7 +273,10 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
 
   const advance = useCallback(() => {
     const s = stateRef.current;
-    if (s.status === "stopped" || s.status === "awaiting-approval") return;
+    // Never step past an open human gate — the pending queue is the source of
+    // truth, not the status field — and never run while the stop is engaged.
+    if (s.status === "stopped") return;
+    if (pendingApprovals(s.events).length > 0) return;
     const step = DEMO_SCRIPT[s.scriptIndex];
     if (!step) {
       finishRun();
@@ -450,7 +453,9 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
       // proposal settles back instead (so an approval can never silently start
       // the whole 60-second script from step zero).
       const wasScripted = s.scripted;
-      const stillAwaiting = pendingApprovals(s.events).some((e) => e.id !== eventId);
+      // Rows OTHER than this one still awaiting a human → the gate stays up
+      // even after this approval resolves.
+      const othersAwaiting = pendingApprovals(s.events).some((e) => e.id !== eventId);
       // Evidence for the human decision — evaluated under the CURRENT mandate.
       const ev = guardEvidence(action, base.intent ?? "user", base.prompt);
 
@@ -501,13 +506,13 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
         });
       }
       if (frozen) return; // stay stopped — intent recorded, nothing continues
-      if (wasScripted && !stillAwaiting) {
+      // The reducer already recomputed status from the surviving pending queue:
+      // resolving the last pending action drops the agent straight to IDLE (the
+      // lab unlocks, Nova stops saying "Needs your OK"); if others remain it
+      // stays parked. Here we only decide whether a paused scripted run that is
+      // now clear continues on its own timer.
+      if (wasScripted && !othersAwaiting) {
         schedule(() => advance(), 700);
-      } else {
-        dispatch({
-          type: "set-status",
-          status: stillAwaiting ? "awaiting-approval" : "idle",
-        });
       }
     },
     [advance, executedFollowups, guardEvidence, schedule, stampEvent]
@@ -521,7 +526,7 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
       const action = base.action;
       const frozen = stateRef.current.status === "stopped";
       const wasScripted = s.scripted;
-      const stillAwaiting = pendingApprovals(s.events).some((e) => e.id !== eventId);
+      const othersAwaiting = pendingApprovals(s.events).some((e) => e.id !== eventId);
       const ev = guardEvidence(action, base.intent ?? "user", base.prompt);
       dispatch({
         type: "resolve-approval",
@@ -540,13 +545,11 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
         ],
       });
       if (frozen) return; // stay stopped
-      if (wasScripted && !stillAwaiting) {
+      // Reducer recomputed status from the pending queue (IDLE when this was
+      // the last row, parked while others remain) — only continue a now-clear
+      // scripted run here.
+      if (wasScripted && !othersAwaiting) {
         schedule(() => advance(), 700);
-      } else {
-        dispatch({
-          type: "set-status",
-          status: stillAwaiting ? "awaiting-approval" : "idle",
-        });
       }
     },
     [advance, guardEvidence, schedule, stampEvent]

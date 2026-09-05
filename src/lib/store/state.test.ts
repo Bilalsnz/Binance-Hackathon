@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeBook, initialState, reducer } from "./state";
+import { computeBook, initialState, pendingApprovals, reducer } from "./state";
 
 test("begin-demo clears the trail and flags a scripted run", () => {
   const mid = reducer(initialState, {
@@ -110,5 +110,105 @@ test("computeBook counts entry notional for buys and reduces it on sells", () =>
   assert.equal(book.positions?.BTC, 120);
   assert.equal(book.ordersToday, 3);
   assert.equal(book.dailyNotionalUsd, 150, "only buys add to daily buy notional");
+});
+
+// ---- pending queue drives "Needs your OK" + the lab lock ----
+
+/** A policy-decision row that passed but is waiting on the human gate. */
+function awaitingDecision(id: string) {
+  return {
+    id,
+    seq: 0,
+    ts: "t",
+    event: "policy-decision" as const,
+    actor: "Nova",
+    summary: "passes policy",
+    tone: "pending" as const,
+    mode: "demo" as const,
+    source: "simulated" as const,
+    action: {
+      id: `a-${id}`,
+      actor: "Nova",
+      goal: "g",
+      kind: "trade" as const,
+      market: "spot" as const,
+      symbol: "BTC",
+      side: "buy" as const,
+      notionalUsd: 100,
+      estRiskUsd: 10,
+      reason: "r",
+      createdAt: "t",
+    },
+    verdict: "approved" as const,
+    requiresApproval: true,
+    approvalState: "awaiting" as const,
+    sentToBroker: false,
+    policyVersion: 1,
+  };
+}
+
+function withOneAwaiting(status: "awaiting-approval" | "stopped") {
+  let s = reducer(initialState, { type: "append", events: [awaitingDecision("a")] });
+  return reducer(s, { type: "set-status", status });
+}
+
+test("resolve-approval on the last pending row drops the agent to idle (never stuck)", () => {
+  const parked = withOneAwaiting("awaiting-approval");
+  assert.equal(pendingApprovals(parked.events).length, 1);
+  const done = reducer(parked, {
+    type: "resolve-approval",
+    eventId: "a",
+    result: "approved",
+    followup: [],
+  });
+  assert.equal(pendingApprovals(done.events).length, 0, "the row pops off the pending queue");
+  assert.equal(done.status, "idle", "emptying the queue must return the agent to idle");
+  assert.equal(done.events.find((e) => e.id === "a")?.approvalState, "approved");
+});
+
+test("resolve-approval keeps the agent parked while other rows still await", () => {
+  let s = reducer(initialState, {
+    type: "append",
+    events: [awaitingDecision("a"), awaitingDecision("b")],
+  });
+  s = reducer(s, { type: "set-status", status: "awaiting-approval" });
+  const done = reducer(s, {
+    type: "resolve-approval",
+    eventId: "a",
+    result: "approved",
+    followup: [],
+  });
+  assert.equal(pendingApprovals(done.events).length, 1);
+  assert.equal(done.status, "awaiting-approval");
+});
+
+test("resolve-approval never lifts an emergency stop", () => {
+  const stopped = withOneAwaiting("stopped");
+  const done = reducer(stopped, {
+    type: "resolve-approval",
+    eventId: "a",
+    result: "approved",
+    followup: [],
+  });
+  assert.equal(pendingApprovals(done.events).length, 0);
+  assert.equal(done.status, "stopped");
+});
+
+test("hydrate parks the agent when a persisted feed still has an awaiting approval", () => {
+  const h = reducer(initialState, { type: "hydrate", patch: { events: [awaitingDecision("a")] } });
+  assert.equal(pendingApprovals(h.events).length, 1);
+  assert.equal(h.status, "awaiting-approval");
+});
+
+test("hydrate with no pending work lands idle", () => {
+  const h = reducer(initialState, { type: "hydrate", patch: { events: [] } });
+  assert.equal(h.status, "idle");
+});
+
+test("clear-all wipes the pending queue too", () => {
+  const parked = withOneAwaiting("awaiting-approval");
+  const cleared = reducer(parked, { type: "clear-all" });
+  assert.equal(pendingApprovals(cleared.events).length, 0);
+  assert.equal(cleared.status, "idle");
 });
 

@@ -58,7 +58,7 @@ const AMOUNT_CHIPS = [40, 80, 250, 1000];
 
 export function ProposalLab() {
   const router = useRouter();
-  const { state, book, setMode, propose } = useAgentGuard();
+  const { state, book, pending, setMode, propose } = useAgentGuard();
   const status = state.status;
 
   const [tab, setTab] = useState<Tab>("composer");
@@ -77,7 +77,7 @@ export function ProposalLab() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const lockReason: { kind: "approvals" | "stopped" | "running"; text: string } | null =
-    status === "awaiting-approval"
+    pending.length > 0
       ? { kind: "approvals", text: "An action is waiting on your sign-off — approve or decline it first." }
       : status === "stopped"
         ? { kind: "stopped", text: "Emergency stop is engaged — Resume the agent first." }
