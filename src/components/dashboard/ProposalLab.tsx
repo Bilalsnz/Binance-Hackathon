@@ -78,7 +78,7 @@ export function ProposalLab() {
 
   const lockReason: { kind: "approvals" | "stopped" | "running"; text: string } | null =
     pending.length > 0
-      ? { kind: "approvals", text: "An action is waiting on your sign-off — approve or decline it first." }
+      ? { kind: "approvals", text: "An action is waiting for your approval — approve or decline it first." }
       : status === "stopped"
         ? { kind: "stopped", text: "Emergency stop is engaged — Resume the agent first." }
         : RUNNING.includes(status)
@@ -465,7 +465,7 @@ function Composer({
       </Btn>
       <p className="text-center text-[11px] muted">
         Evaluated by the deterministic engine against the CURRENT mandate — approved actions pause
-        for your OK, blocked ones show the exact rule.
+        for your approval, blocked ones show the exact rule.
       </p>
     </div>
   );
@@ -637,7 +637,7 @@ function ResultCard({ last, onRerun }: { last: RunResult; onRerun: () => void })
       <div className="row justify-between">
         <p className="label">Latest verdict</p>
         <ToneBadge tone={blocked ? "critical" : needsOk ? "pending" : "ok"}>
-          {blocked ? "Blocked" : needsOk ? "Passes — needs your OK" : "Approved"}
+          {blocked ? "Blocked" : needsOk ? "Passes — needs approval" : "Approved"}
         </ToneBadge>
       </div>
 

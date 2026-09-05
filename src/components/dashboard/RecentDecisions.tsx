@@ -71,7 +71,7 @@ function DecisionRow({ e, onOpen }: { e: AuditEvent; onOpen: () => void }) {
           tone={e.verdict === "blocked" ? "critical" : awaiting ? "pending" : declined ? "warn" : "ok"}
           className="shrink-0"
         >
-          {e.verdict === "blocked" ? "Blocked" : awaiting ? "Needs your OK" : declined ? "Declined" : "Approved"}
+          {e.verdict === "blocked" ? "Blocked" : awaiting ? "Needs approval" : declined ? "Declined" : "Approved"}
         </ToneBadge>
         <ChevronRight className="h-4 w-4 text-slate-600 transition group-hover:text-cyan-300" />
       </span>

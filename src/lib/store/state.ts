@@ -131,7 +131,7 @@ export function computeBook(events: AuditEvent[]): GuardContext {
 
 /**
  * Audit rows that still await a human decision. This derived list is the SINGLE
- * source of truth for "Needs your OK" and the Proposal-lab / scenario locks: an
+ * source of truth for "Needs approval" and the Proposal-lab / scenario locks: an
  * action is pending if and only if it appears here, and approving or declining
  * it (resolve-approval) removes it by flipping `approvalState` away from
  * `awaiting`. `clear-all` wipes it too, because it is derived from `events`.
@@ -255,7 +255,7 @@ export function reducer(state: AppState, action: AppAction): AppState {
         // Approving/declining POPS the row off the pending queue (it is no
         // longer `awaiting` above) and recomputes the status from what is left:
         // the last pending action resolved → IDLE (lab unlocks, Nova stops
-        // saying "Needs your OK"); more rows still open → stays parked.
+        // saying "Needs approval"); more rows still open → stays parked.
         status: statusForPending(state.status, events),
       };
     }

@@ -112,7 +112,7 @@ test("computeBook counts entry notional for buys and reduces it on sells", () =>
   assert.equal(book.dailyNotionalUsd, 150, "only buys add to daily buy notional");
 });
 
-// ---- pending queue drives "Needs your OK" + the lab lock ----
+// ---- pending queue drives "Needs approval" + the lab lock ----
 
 /** A policy-decision row that passed but is waiting on the human gate. */
 function awaitingDecision(id: string) {

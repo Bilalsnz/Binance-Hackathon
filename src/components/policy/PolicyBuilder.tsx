@@ -332,7 +332,7 @@ export function PolicyBuilder() {
                   >
                     {pv.ok
                       ? pv.needsApproval
-                        ? "Approves — pauses for your OK."
+                        ? "Approves — pauses for your approval."
                         : "Approves automatically."
                       : `${ruleLabelOf(pv.rule!)} — ${pv.reason}`}
                   </p>
@@ -341,7 +341,7 @@ export function PolicyBuilder() {
                   tone={pv.ok ? (pv.needsApproval ? "pending" : "ok") : "critical"}
                   className="shrink-0"
                 >
-                  {pv.ok ? (pv.needsApproval ? "Needs your OK" : "Approved") : "Blocked"}
+                  {pv.ok ? (pv.needsApproval ? "Needs approval" : "Approved") : "Blocked"}
                 </ToneBadge>
               </li>
             );

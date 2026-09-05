@@ -101,7 +101,7 @@ export default function ApprovalsPage() {
             <p className="mx-auto mt-1 max-w-[36ch] text-xs muted">
               {state.events.length === 0
                 ? "When the agent proposes an action that fits your policy and your mandate requires approval, the decision lands here for your sign-off."
-                : "Every action needing your OK has been reviewed. Decisions you approved or declined are timestamped in the audit trail."}
+                : "Every action needing your approval has been reviewed. Decisions you approved or declined are timestamped in the audit trail."}
             </p>
           </div>
           {state.events.length === 0 ? (

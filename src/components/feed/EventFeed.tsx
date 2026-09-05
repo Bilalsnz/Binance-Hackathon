@@ -142,7 +142,7 @@ function AuditDecision({
   const chip: { label: string; tone: Tone } = blocked
     ? { label: "Blocked", tone: "critical" }
     : awaiting
-      ? { label: "Needs your OK", tone: "pending" }
+      ? { label: "Needs approval", tone: "pending" }
       : declined
         ? { label: "Declined", tone: "warn" }
         : { label: "Approved", tone: "ok" };
@@ -192,7 +192,7 @@ function AuditDecision({
           {blocked
             ? `${event.reason ?? "A policy rule failed."}`
             : awaiting
-              ? "Passes every rule — waiting for your OK."
+              ? "Passes every rule — waiting for your approval."
               : declined
                 ? "You declined it — nothing was executed."
                 : executed

@@ -47,7 +47,7 @@ const STATUS_META: Record<AgentStatus, { label: string; tone: Tone; dot: string 
   running: { label: "Running", tone: "info", dot: "bg-cyan-400 animate-pulse" },
   researching: { label: "Researching", tone: "info", dot: "bg-cyan-400 animate-pulse" },
   proposing: { label: "Proposing", tone: "violet", dot: "bg-violet-400 animate-pulse" },
-  "awaiting-approval": { label: "Needs your OK", tone: "pending", dot: "bg-amber-400 animate-pulse" },
+  "awaiting-approval": { label: "Needs approval", tone: "pending", dot: "bg-amber-400 animate-pulse" },
   stopped: { label: "Emergency stop", tone: "critical", dot: "bg-rose-500" },
 };
 

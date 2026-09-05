@@ -508,7 +508,7 @@ export function AgentGuardProvider({ children }: { children: ReactNode }) {
       if (frozen) return; // stay stopped — intent recorded, nothing continues
       // The reducer already recomputed status from the surviving pending queue:
       // resolving the last pending action drops the agent straight to IDLE (the
-      // lab unlocks, Nova stops saying "Needs your OK"); if others remain it
+      // lab unlocks, Nova stops saying "Needs approval"); if others remain it
       // stays parked. Here we only decide whether a paused scripted run that is
       // now clear continues on its own timer.
       if (wasScripted && !othersAwaiting) {

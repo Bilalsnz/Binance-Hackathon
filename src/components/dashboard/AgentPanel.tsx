@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  ArrowDownLeft,
   ArrowRight,
   ArrowUpRight,
   Ban,
@@ -13,6 +14,8 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useAgentGuard } from "@/lib/store/AgentGuardProvider";
+import { describeAction } from "@/lib/store/events";
+import type { AuditEvent } from "@/lib/engine/types";
 import { AGENT_NAME } from "@/lib/demo/script";
 import { agentStatusMeta, Btn, Card, cn, ToneBadge } from "@/components/ui";
 
@@ -37,17 +40,22 @@ export function AgentPanel() {
     stopAgent,
     resetDemo,
     pending,
+    approve,
+    reject,
     setMode,
   } = useAgentGuard();
 
   const status = state.status;
-  // "Needs your OK" and the approve gate are driven by the pending QUEUE, not
+  // "Needs approval" and the approve gate are driven by the pending QUEUE, not
   // by the raw status field: the moment the last pending action resolves the
   // queue is empty and Nova drops back to Idle — it can never be left saying
-  // "Needs your OK" over an already-handled approval. Emergency stop outranks
+  // "Needs approval" over an already-handled approval. Emergency stop outranks
   // a waiting approval so a frozen agent still reads as stopped.
   const awaiting = pending.length > 0 && status !== "stopped";
   const meta = agentStatusMeta(awaiting ? "awaiting-approval" : status);
+  // Approve/Decline live inline on Home; rows only render for events that carry
+  // a concrete action (every real pending approval does).
+  const actionable = pending.filter((e) => e.action);
   const live = state.mode === "live";
   const hasRun = state.events.length > 0;
   const running = RUNNING.includes(status);
@@ -159,9 +167,30 @@ export function AgentPanel() {
               </span>
               {AGENT_NAME} is holding at your sign-off. Approve or decline to continue.
             </p>
-            <Link href="/app/approvals" className="btn btn-primary w-full !py-3 text-base">
-              Review {pending.length} pending approval{pending.length === 1 ? "" : "s"} <ArrowRight className="h-4 w-4" />
-            </Link>
+            {actionable.length > 0 ? (
+              <ul className="grid gap-1.5">
+                {actionable.map((e) => (
+                  <PendingApprovalRow
+                    key={e.id}
+                    e={e}
+                    onApprove={() => approve(e.id)}
+                    onDecline={() => reject(e.id)}
+                  />
+                ))}
+              </ul>
+            ) : null}
+            {actionable.length < pending.length ? (
+              <Link href="/app/approvals" className="btn btn-primary w-full !py-3 text-base">
+                Review {pending.length} pending approval{pending.length === 1 ? "" : "s"} <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <Link
+                href="/app/approvals"
+                className="row justify-center gap-1 rounded-lg py-1 text-[11px] font-semibold text-cyan-300 transition hover:text-cyan-200"
+              >
+                View all {pending.length} approval{pending.length === 1 ? "" : "s"} <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
           </div>
         ) : running ? (
           <div className="grid gap-2">
@@ -247,5 +276,42 @@ function StatTile({
         <ArrowUpRight className="h-2.5 w-2.5 opacity-0 transition group-hover:opacity-100" />
       </span>
     </Link>
+  );
+}
+
+/**
+ * One pending approval on the Home panel. A real Approve / Decline pair per
+ * action — no round-trip to the Approvals page needed to keep the agent moving.
+ */
+function PendingApprovalRow({
+  e,
+  onApprove,
+  onDecline,
+}: {
+  e: AuditEvent;
+  onApprove: () => void;
+  onDecline: () => void;
+}) {
+  const action = e.action;
+  if (!action) return null;
+  const SideIcon = action.side === "buy" ? ArrowDownLeft : ArrowUpRight;
+  return (
+    <li className="row items-center gap-2.5 rounded-xl border border-white/[0.07] bg-ink-950/50 px-3 py-2">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/25">
+        <SideIcon className="h-4 w-4" strokeWidth={2.2} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-semibold text-slate-200">{describeAction(action)}</p>
+        <p className="truncate text-[11px] muted">{action.goal}</p>
+      </div>
+      <div className="row shrink-0 gap-1.5">
+        <Btn variant="outline-danger" onClick={onDecline} className="!px-2.5 !py-1.5 text-xs">
+          Decline
+        </Btn>
+        <Btn variant="ok" onClick={onApprove} className="!px-2.5 !py-1.5 text-xs">
+          Approve
+        </Btn>
+      </div>
+    </li>
   );
 }

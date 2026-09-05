@@ -53,7 +53,7 @@ export function DecisionCard({ event, embed = false }: { event: AuditEvent; embe
   const badge = blocked ? (
     <ToneBadge tone="critical">Blocked</ToneBadge>
   ) : awaiting ? (
-    <ToneBadge tone="pending">Needs your OK</ToneBadge>
+    <ToneBadge tone="pending">Needs approval</ToneBadge>
   ) : (
     <ToneBadge tone="ok">Approved</ToneBadge>
   );
@@ -181,7 +181,7 @@ export function DecisionCard({ event, embed = false }: { event: AuditEvent; embe
                     ? "sent to demo broker"
                     : event.verdict === "blocked"
                       ? "never reached a broker"
-                      : "holding for your OK — not sent"}
+                      : "holding for your approval — not sent"}
                 </span>
               </div>
             </div>

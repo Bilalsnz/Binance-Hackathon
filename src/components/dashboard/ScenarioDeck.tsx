@@ -43,7 +43,8 @@ export function ScenarioDeck() {
     const outcome = await propose(scenarioAction(sc), { intent: "scenario" });
     setBusy(null);
     if (!outcome) return;
-    // Needs your OK → the Approvals screen holds the Approve/Decline buttons.
+    // Needs approval → route to the Approvals screen, where the full decision
+    // (and the same Approve/Decline pair shown on Home) waits for sign-off.
     if (outcome.verdict === "needs-ok") {
       router.push("/app/approvals");
     } else {
